@@ -34,9 +34,14 @@ module.exports = function(grunt) {
           yuicompress: true,
           optimization: 2
         },
-        files: {
-          "build/sense-search.min.css": "src/less/main.less" // destination file and source file
-        }
+        files: [
+          {
+            "build/sense-search.min.css": "src/less/main.less" // destination file and source file
+          },
+          {
+            "examples/sense-search.min.css": "src/less/main.less" // destination file and source file
+          }
+        ]
       }
     },
     uglify:{
@@ -45,9 +50,14 @@ module.exports = function(grunt) {
         mangle   : true
       },
       build: {
-        files: {
-          'build/sense-search.min.js': ['build/sense-search.js']
-        }
+        files: [
+          {
+            'build/sense-search.min.js': ['build/sense-search.js']
+          },
+          {
+            'examples/sense-search.min.js': ['build/sense-search.js']
+          }
+        ]
       }
     }
   });
