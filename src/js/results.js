@@ -1,10 +1,13 @@
 var SenseSearchResult = (function(){
+
+  var templateHtml = "<div id='{id}_results' class='sense-search-results'></div>";
+
   function SenseSearchResult(id, options){
     var element = document.createElement("div");
     element.id = id;
     element.classList.add("sense-search-results-container");
-    //var html = templateHtml.replace(/{id}/gim, id);
-    //element.innerHTML = html;
+    var html = templateHtml.replace(/{id}/gim, id);
+    element.innerHTML = html;
     options = options || {};
     for(var o in options){
       this[o] = options[o];
@@ -100,6 +103,13 @@ var SenseSearchResult = (function(){
     },
     onSearchResults:{
       value: function(results){
+        this.data = []; //after each new search we clear out the previous results
+        this.getHyperCubeData();
+      }
+    },
+    getNextBatch:{
+      value: function(){
+        this.pageTop += this.pageSize;
         this.getHyperCubeData();
       }
     },
@@ -126,21 +136,8 @@ var SenseSearchResult = (function(){
               }
               items.push(item);
             }
-            this.data = items;
-            var html = "";
-            for (var i=0;i<this.data.length;i++){
-              html += "<div class='sense-search-result'>";
-              for(var f in this.data[i]){
-                html += "<div>";
-                html += "<strong>";
-                html += f;
-                html += ":</strong>";
-                html += this.data[i][f].html;
-                html += "</div>";
-              }
-              html += "</div>";
-            }
-            document.getElementById(that.id).innerHTML = html;
+            that.data.concat(items);
+            that.renderItems(items);
           });
         });
       }
@@ -180,6 +177,35 @@ var SenseSearchResult = (function(){
         else{
           return text;
         }
+      }
+    },
+    renderItems:{
+      value: function(newItems){
+        var html = "<ul>";
+        var columnCount = 0;
+        for(var c in newItems[0]){
+          columnCount++;
+        }
+        var columnWidth = Math.floor(100 / columnCount);
+        //draw header row
+        html += "<li>";
+        for(var f in newItems[0]){
+          html += "<div class='sense-search-result-cell' style='width: "+columnWidth+"%'>";
+          html += "<strong>"+f+"</strong>"
+          html += "</div>";
+        }
+        html += "</li>";
+        for (var i=0;i<newItems.length;i++){
+          html += "<li>";
+          for(var f in newItems[i]){
+            html += "<div class='sense-search-result-cell' style='width: "+columnWidth+"%'>";
+            html += newItems[i][f].html;
+            html += "</div>";
+          }
+          html += "</li>";
+        }
+        html += "</ul>"
+        document.getElementById(this.id+"_results").innerHTML = html;
       }
     }
   });

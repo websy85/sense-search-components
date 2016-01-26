@@ -31,6 +31,8 @@ var SenseSearchInput = (function(){
       SPACE: 32
   };
 
+  var templateHtml = "<div class='sense-search-input-main'><div id='{id}_ghost' class='sense-search-input-bg'></div><input id='{id}_input' autofocus placeholder='Please wait...' disabled='disabled' type='text' autocorrect='off' autocomplete='off' autocapitalize='off' spellcheck='false' /><div class='sense-search-lozenge-container'></div><button type='button' class='sense-search-input-clear'>x</button></div><div id='{id}_suggestions' class='sense-search-suggestion-container'><ul id='{id}_suggestionList'></ul></div>";
+
   function SenseSearchInput(id, options){
     var element = document.createElement("div");
     element.id = id;
@@ -67,10 +69,9 @@ var SenseSearchInput = (function(){
     this.searchTimeout = this.searchTimeout || 300;
     this.suggestTimeout = this.suggestTimeout || 100;
     senseSearch.ready.subscribe(this.activate.bind(this));
+    senseSearch.cleared.subscribe(this.onClear.bind(this));
     return {element: element, object: this};
   }
-
-  var templateHtml = "<div class=''><div id='{id}_ghost' class='sense-search-input-bg'></div><input id='{id}_input' autofocus placeholder='Please wait...' disabled='disabled' type='text' autocorrect='off' autocomplete='off' autocapitalize='off' spellcheck='false' /><div class='sense-search-lozenge-container'></div><button type='button' class='sense-search-input-clear'>x</button></div><div id='{id}_suggestions' class='sense-search-suggestion-container'><ul></ul></div>";
 
   SenseSearchInput.prototype = Object.create(Object.prototype, {
     id:{
@@ -152,6 +153,13 @@ var SenseSearchInput = (function(){
       writable: true,
       value: 0
     },
+    onClear: {
+      value: function(){
+        document.getElementById(this.id+'_input').value = "";
+        this.searchText = "";
+        this.hideSuggestions();
+      }
+    },
     onSearchResults:{
       value: function(){
 
@@ -161,6 +169,9 @@ var SenseSearchInput = (function(){
       value: function(suggestions){
         this.suggestions = suggestions.qSuggestions;
         this.suggestions.splice(5, suggestions.qSuggestions.length - 4);
+        if(this.suggestions.length > 0){
+          this.activeSuggestion = 0;
+        }
         this.showSuggestions();
       }
     },
@@ -170,8 +181,20 @@ var SenseSearchInput = (function(){
       }
     },
     onClick:{
-      value: function(){
-        console.log('click');
+      value: function(event){
+        console.log(event);
+        if(event.target.classList.contains('sense-search-input-clear')){
+          //the clear button was clicked
+          event.stopPropagation();
+          this.clear();
+        }
+        else if (event.target.classList.contains('sense-search-suggestion-item')) {
+          //a suggestion was clicked
+          event.stopPropagation();
+          this.activeSuggestion = parseInt(event.target.attributes['data-index'].value);
+          this.drawGhost(); //this gets the text ready for using as the new value
+          this.acceptSuggestion();
+        }
       }
     },
     onKeyDown: {
@@ -185,15 +208,15 @@ var SenseSearchInput = (function(){
             this.showSuggestions();
           }
           else if(event.keyCode == Key.RIGHT){
-            //activate the next suggestion
             if(this.suggesting){
+              //activate the next suggestion
               event.preventDefault();
               this.nextSuggestion();
             }
           }
           else if(event.keyCode == Key.LEFT){
-            //activate the previous suggestion
             if(this.suggesting){
+              //activate the previous suggestion
               event.preventDefault();
               this.prevSuggestion();
             }
@@ -236,8 +259,22 @@ var SenseSearchInput = (function(){
             if(this.searchText && this.searchText.length > 0){
               //we'll check here to make sure the latest term is at least 2 characters before searching
               if(this.searchText.split(" ").pop().length>1){
-                this.search();
-                this.suggest();
+                var that = this;
+                if(this.searchTimeoutFn){
+                  clearTimeout(this.searchTimeoutFn);
+                }
+                this.searchTimeoutFn = setTimeout(function(){
+                  that.search();
+                }, this.searchTimeout);
+
+                if(this.searchText.length > 1 && this.cursorPosition==this.searchText.length){
+                  if(this.suggestTimeoutFn){
+                    clearTimeout(this.suggestTimeoutFn);
+                  }
+                  this.suggestTimeoutFn = setTimeout(function(){
+                    that.suggest();
+                  }, this.suggestTimeout);
+                }
               }
             }
             else{
@@ -249,21 +286,20 @@ var SenseSearchInput = (function(){
     },
     showSuggestions:{
       value: function(){
-        if(this.suggestingTimeoutFn){
-          clearTimeout(this.suggestingTimeoutFn);
-        }
-        this.suggestingTimeoutFn = setTimeout(function(){
-          //close the suggestions after inactivity for [suggestingTimeout] milliseconds
-          this.hideSuggestions.call(this);
-        }.bind(this), this.suggestingTimeout);
+        this.startSuggestionTimeout();
 
         if(this.searchText && this.searchText.length > 1 && this.cursorPosition==this.searchText.length && this.suggestions.length > 0){
           this.suggesting = true;
+          //render the suggested completion
           this.drawGhost();
+          //render the suggestions
+          document.getElementById(this.id+"_suggestions").style.display = "block";
+          this.drawSuggestions();
         }
         else{
           this.suggesting = false;
           this.removeGhost();
+          this.hideSuggestions();
         }
       }
     },
@@ -274,10 +310,24 @@ var SenseSearchInput = (function(){
         this.ghostPart = "";
         this.ghostQuery = "";
         this.ghostDisplay = "";
+        this.removeGhost();
+        document.getElementById(this.id+"_suggestions").style.display = "none";
+      }
+    },
+    startSuggestionTimeout:{
+      value: function(){
+        if(this.suggestingTimeoutFn){
+          clearTimeout(this.suggestingTimeoutFn);
+        }
+        this.suggestingTimeoutFn = setTimeout(function(){
+          //close the suggestions after inactivity for [suggestingTimeout] milliseconds
+          this.hideSuggestions.call(this);
+        }.bind(this), this.suggestingTimeout);
       }
     },
     nextSuggestion:{
       value: function(){
+        this.startSuggestionTimeout();
         if(this.activeSuggestion==this.suggestions.length-1){
           this.activeSuggestion = 0;
         }
@@ -285,10 +335,12 @@ var SenseSearchInput = (function(){
           this.activeSuggestion++;
         }
         this.drawGhost();
+        this.highlightActiveSuggestion();
       }
     },
     prevSuggestion: {
       value: function(){
+        this.startSuggestionTimeout();
         if(this.activeSuggestion==0){
           this.activeSuggestion = this.suggestions.length-1;
         }
@@ -296,38 +348,26 @@ var SenseSearchInput = (function(){
           this.activeSuggestion--;
         }
         this.drawGhost();
+        this.highlightActiveSuggestion();
       }
     },
     acceptSuggestion:{
       value: function(){
         this.searchText = this.ghostQuery;
         this.suggestions = [];
-        this.hideSuggestion();
+        this.hideSuggestions();
+        document.getElementById(this.id+'_input').value = this.searchText;
         this.search();
       }
     },
     search:{
       value: function(){
-        var that = this;
-        if(this.searchTimeoutFn){
-          clearTimeout(this.searchTimeoutFn);
-        }
-        this.searchTimeoutFn = setTimeout(function(){
-          senseSearch.search(that.searchText, that.searchFields || []);
-        }, this.searchTimeout);
+        senseSearch.search(this.searchText, this.searchFields || []);
       }
     },
     suggest:{
       value: function(){
-        var that = this;
-        if(this.searchText.length > 1 && this.cursorPosition==this.searchText.length){
-          if(this.suggestTimeoutFn){
-            clearTimeout(this.suggestTimeoutFn);
-          }
-          this.suggestTimeoutFn = setTimeout(function(){
-            senseSearch.suggest(that.searchText, that.suggestFields || []);
-          }, this.suggestTimeout);
-        }
+        senseSearch.suggest(this.searchText, this.suggestFields || []);
       }
     },
     drawGhost:{
@@ -341,6 +381,29 @@ var SenseSearchInput = (function(){
     removeGhost:{
       value: function(){
         document.getElementById(this.id+"_ghost").innerHTML = "";
+      }
+    },
+    drawSuggestions:{
+      value: function(){
+        var suggestionsHtml = "";
+        for (var i=0;i<this.suggestions.length;i++){
+          suggestionsHtml += "<li id='"+this.id+"_suggestion_"+i+"' class='sense-search-suggestion-item' data-index='"+i+"'>";
+          suggestionsHtml += this.suggestions[i].qValue;
+          suggestionsHtml += "</li>";
+        }
+        document.getElementById(this.id+"_suggestionList").innerHTML = suggestionsHtml;
+        this.highlightActiveSuggestion();
+      }
+    },
+    highlightActiveSuggestion:{
+      value: function(){
+        //remove all previous highlights
+        var parent = document.getElementById(this.id+"_suggestionList");
+        for (var c=0; c < parent.childElementCount;c++){
+          parent.childNodes[c].classList.remove("active");
+        }
+        //add the 'active' class to the current suggestion
+        document.getElementById(this.id+"_suggestion_"+this.activeSuggestion).classList.add("active");
       }
     },
     activate:{
@@ -380,12 +443,15 @@ var SenseSearchInput = (function(){
 }());
 
 var SenseSearchResult = (function(){
+
+  var templateHtml = "<div id='{id}_results' class='sense-search-results'></div>";
+
   function SenseSearchResult(id, options){
     var element = document.createElement("div");
     element.id = id;
     element.classList.add("sense-search-results-container");
-    //var html = templateHtml.replace(/{id}/gim, id);
-    //element.innerHTML = html;
+    var html = templateHtml.replace(/{id}/gim, id);
+    element.innerHTML = html;
     options = options || {};
     for(var o in options){
       this[o] = options[o];
@@ -481,6 +547,13 @@ var SenseSearchResult = (function(){
     },
     onSearchResults:{
       value: function(results){
+        this.data = []; //after each new search we clear out the previous results
+        this.getHyperCubeData();
+      }
+    },
+    getNextBatch:{
+      value: function(){
+        this.pageTop += this.pageSize;
         this.getHyperCubeData();
       }
     },
@@ -507,21 +580,8 @@ var SenseSearchResult = (function(){
               }
               items.push(item);
             }
-            this.data = items;
-            var html = "";
-            for (var i=0;i<this.data.length;i++){
-              html += "<div class='sense-search-result'>";
-              for(var f in this.data[i]){
-                html += "<div>";
-                html += "<strong>";
-                html += f;
-                html += ":</strong>";
-                html += this.data[i][f].html;
-                html += "</div>";
-              }
-              html += "</div>";
-            }
-            document.getElementById(that.id).innerHTML = html;
+            that.data.concat(items);
+            that.renderItems(items);
           });
         });
       }
@@ -561,6 +621,35 @@ var SenseSearchResult = (function(){
         else{
           return text;
         }
+      }
+    },
+    renderItems:{
+      value: function(newItems){
+        var html = "<ul>";
+        var columnCount = 0;
+        for(var c in newItems[0]){
+          columnCount++;
+        }
+        var columnWidth = Math.floor(100 / columnCount);
+        //draw header row
+        html += "<li>";
+        for(var f in newItems[0]){
+          html += "<div class='sense-search-result-cell' style='width: "+columnWidth+"%'>";
+          html += "<strong>"+f+"</strong>"
+          html += "</div>";
+        }
+        html += "</li>";
+        for (var i=0;i<newItems.length;i++){
+          html += "<li>";
+          for(var f in newItems[i]){
+            html += "<div class='sense-search-result-cell' style='width: "+columnWidth+"%'>";
+            html += newItems[i][f].html;
+            html += "</div>";
+          }
+          html += "</li>";
+        }
+        html += "</ul>"
+        document.getElementById(this.id+"_results").innerHTML = html;
       }
     }
   });
@@ -954,8 +1043,8 @@ var SenseSearch = (function(){
               });
             }
             else{
-              //we send a clear instruction
-              that.clear();
+              //we send a no results instruction
+              
             }
           }
         });

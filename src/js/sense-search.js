@@ -115,8 +115,8 @@ var SenseSearch = (function(){
               });
             }
             else{
-              //we send a clear instruction
-              that.clear();
+              //we send a no results instruction
+              
             }
           }
         });
