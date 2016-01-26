@@ -31,7 +31,7 @@ var SenseSearchInput = (function(){
       SPACE: 32
   };
 
-  var templateHtml = "<div class='sense-search-input-main'><div id='{id}_ghost' class='sense-search-input-bg'></div><input id='{id}_input' autofocus placeholder='Please wait...' disabled='disabled' type='text' autocorrect='off' autocomplete='off' autocapitalize='off' spellcheck='false' /><div class='sense-search-lozenge-container'></div><button type='button' class='sense-search-input-clear'>x</button></div><div id='{id}_suggestions' class='sense-search-suggestion-container'><ul id='{id}_suggestionList'></ul></div>";
+  var templateHtml = "<div class='sense-search-input-main'><div id='{id}_ghost' class='sense-search-input-bg'></div><input id='{id}_input' autofocus placeholder='Please wait...' disabled='disabled' type='text' autocorrect='off' autocomplete='off' autocapitalize='off' spellcheck='false' /><div class='sense-search-lozenge-container'></div><button type='button' class='sense-search-input-clear'>x</button></div><div id='{id}_suggestions' class='sense-search-suggestion-container'><ul id='{id}_suggestionList'></ul></div><div id='{id}_associations' class='sense-search-association-container'><ul id='{id}_associationsList'></ul></div>";
 
   function SenseSearchInput(id, options){
     var element = document.createElement("div");
@@ -86,6 +86,7 @@ var SenseSearchInput = (function(){
           }
         }
         if(senseSearch && senseSearch.exchange.connection){
+          senseSearch.searchAssociations.subscribe(this.onSearchAssociations.bind(this));
           senseSearch.suggestResults.subscribe(this.onSuggestResults.bind(this));
           if(!senseSearch.inputs[this.id]){
             senseSearch.inputs[this.id] = this;
@@ -153,6 +154,10 @@ var SenseSearchInput = (function(){
       writable: true,
       value: 0
     },
+    mode: {
+      writable: true,
+      value: "simple"
+    },
     onClear: {
       value: function(){
         document.getElementById(this.id+'_input').value = "";
@@ -163,6 +168,14 @@ var SenseSearchInput = (function(){
     onSearchResults:{
       value: function(){
 
+      }
+    },
+    onSearchAssociations:{
+      value: function(associations){
+        console.log("associations");
+        console.log(associations);
+        this.associations = associations.qResults;
+        this.showAssociations();
       }
     },
     onSuggestResults:{
@@ -314,6 +327,32 @@ var SenseSearchInput = (function(){
         document.getElementById(this.id+"_suggestions").style.display = "none";
       }
     },
+    showAssociations: {
+      value: function(){
+        var html = "";
+        for (var i=0;i<this.associations.qSearchTermsMatched.length;i++){ //loops through each search term match group
+          var termsMatched = this.associations.qSearchTermsMatched[i];
+          for (var j=0;j<termsMatched.length;j++){  //loops through each valid association
+            html += "<li>";
+            for(var k=0;k<termsMatched[j].qFieldMatches.length;k++){  //loops through each field in the association
+              var fieldMatch = termsMatched[j].qFieldMatches[k];
+              html += "<div>";
+              html += this.associations.qFieldNames[fieldMatch.qField];
+              html += "</div>";
+            }
+            html += j
+            html += "</li>";
+          }
+        }
+        document.getElementById(this.id+"_associationsList").innerHTML = html;
+        document.getElementById(this.id+"_associations").style.display = "block";
+      }
+    },
+    hideAssociations: {
+      value: function(){
+
+      }
+    },
     startSuggestionTimeout:{
       value: function(){
         if(this.suggestingTimeoutFn){
@@ -362,7 +401,7 @@ var SenseSearchInput = (function(){
     },
     search:{
       value: function(){
-        senseSearch.search(this.searchText, this.searchFields || []);
+        senseSearch.search(this.searchText, this.searchFields || [], this.mode);
       }
     },
     suggest:{

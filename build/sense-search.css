@@ -102,6 +102,20 @@
   background-color: #838383;
   color: #fff;
 }
+.sense-search-input-container .sense-search-association-container {
+  display: none;
+}
+.sense-search-input-container .sense-search-association-container ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+.sense-search-input-container .sense-search-association-container ul li {
+  height: 40px;
+}
+.sense-search-input-container .sense-search-association-container ul li:hover {
+  background-color: #d9d9d9;
+}
 .sense-search-results-container .sense-search-results {
   padding: 10px 0px;
 }

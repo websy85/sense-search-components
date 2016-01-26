@@ -31,7 +31,7 @@ var SenseSearchInput = (function(){
       SPACE: 32
   };
 
-  var templateHtml = "<div class='sense-search-input-main'><div id='{id}_ghost' class='sense-search-input-bg'></div><input id='{id}_input' autofocus placeholder='Please wait...' disabled='disabled' type='text' autocorrect='off' autocomplete='off' autocapitalize='off' spellcheck='false' /><div class='sense-search-lozenge-container'></div><button type='button' class='sense-search-input-clear'>x</button></div><div id='{id}_suggestions' class='sense-search-suggestion-container'><ul id='{id}_suggestionList'></ul></div>";
+  var templateHtml = "<div class='sense-search-input-main'><div id='{id}_ghost' class='sense-search-input-bg'></div><input id='{id}_input' autofocus placeholder='Please wait...' disabled='disabled' type='text' autocorrect='off' autocomplete='off' autocapitalize='off' spellcheck='false' /><div class='sense-search-lozenge-container'></div><button type='button' class='sense-search-input-clear'>x</button></div><div id='{id}_suggestions' class='sense-search-suggestion-container'><ul id='{id}_suggestionList'></ul></div><div id='{id}_associations' class='sense-search-association-container'><ul id='{id}_associationsList'></ul></div>";
 
   function SenseSearchInput(id, options){
     var element = document.createElement("div");
@@ -86,6 +86,7 @@ var SenseSearchInput = (function(){
           }
         }
         if(senseSearch && senseSearch.exchange.connection){
+          senseSearch.searchAssociations.subscribe(this.onSearchAssociations.bind(this));
           senseSearch.suggestResults.subscribe(this.onSuggestResults.bind(this));
           if(!senseSearch.inputs[this.id]){
             senseSearch.inputs[this.id] = this;
@@ -153,6 +154,10 @@ var SenseSearchInput = (function(){
       writable: true,
       value: 0
     },
+    mode: {
+      writable: true,
+      value: "simple"
+    },
     onClear: {
       value: function(){
         document.getElementById(this.id+'_input').value = "";
@@ -163,6 +168,14 @@ var SenseSearchInput = (function(){
     onSearchResults:{
       value: function(){
 
+      }
+    },
+    onSearchAssociations:{
+      value: function(associations){
+        console.log("associations");
+        console.log(associations);
+        this.associations = associations.qResults;
+        this.showAssociations();
       }
     },
     onSuggestResults:{
@@ -314,6 +327,32 @@ var SenseSearchInput = (function(){
         document.getElementById(this.id+"_suggestions").style.display = "none";
       }
     },
+    showAssociations: {
+      value: function(){
+        var html = "";
+        for (var i=0;i<this.associations.qSearchTermsMatched.length;i++){ //loops through each search term match group
+          var termsMatched = this.associations.qSearchTermsMatched[i];
+          for (var j=0;j<termsMatched.length;j++){  //loops through each valid association
+            html += "<li>";
+            for(var k=0;k<termsMatched[j].qFieldMatches.length;k++){  //loops through each field in the association
+              var fieldMatch = termsMatched[j].qFieldMatches[k];
+              html += "<div>";
+              html += this.associations.qFieldNames[fieldMatch.qField];
+              html += "</div>";
+            }
+            html += j
+            html += "</li>";
+          }
+        }
+        document.getElementById(this.id+"_associationsList").innerHTML = html;
+        document.getElementById(this.id+"_associations").style.display = "block";
+      }
+    },
+    hideAssociations: {
+      value: function(){
+
+      }
+    },
     startSuggestionTimeout:{
       value: function(){
         if(this.suggestingTimeoutFn){
@@ -362,7 +401,7 @@ var SenseSearchInput = (function(){
     },
     search:{
       value: function(){
-        senseSearch.search(this.searchText, this.searchFields || []);
+        senseSearch.search(this.searchText, this.searchFields || [], this.mode);
       }
     },
     suggest:{
@@ -483,7 +522,7 @@ var SenseSearchResult = (function(){
       value: false
     },
     attach:{
-      value: function(options){
+      value: function(options, callbackFn){
         var that = this;
         if(options){
           for(var o in options){
@@ -494,8 +533,12 @@ var SenseSearchResult = (function(){
           var hDef = this.buildHyperCubeDef();
           senseSearch.exchange.ask(senseSearch.appHandle, "CreateSessionObject", [hDef], function(response){
             that.handle = response.result.qReturn.qHandle;
+            if(typeof(callbackFn)==="function"){
+              callbackFn.call(null);
+            }
           });
           senseSearch.searchResults.subscribe(this.onSearchResults.bind(this));
+          senseSearch.noResults.subscribe(this.onNoResults.bind(this));
           senseSearch.results[this.id] = this;
         }
       }
@@ -548,7 +591,13 @@ var SenseSearchResult = (function(){
     onSearchResults:{
       value: function(results){
         this.data = []; //after each new search we clear out the previous results
+        this.pageTop = 0;
         this.getHyperCubeData();
+      }
+    },
+    onNoResults: {
+      value:  function(){
+        this.renderItems([]);
       }
     },
     getNextBatch:{
@@ -580,7 +629,7 @@ var SenseSearchResult = (function(){
               }
               items.push(item);
             }
-            that.data.concat(items);
+            that.data = that.data.concat(items);
             that.renderItems(items);
           });
         });
@@ -625,31 +674,42 @@ var SenseSearchResult = (function(){
     },
     renderItems:{
       value: function(newItems){
-        var html = "<ul>";
-        var columnCount = 0;
-        for(var c in newItems[0]){
-          columnCount++;
-        }
-        var columnWidth = Math.floor(100 / columnCount);
-        //draw header row
-        html += "<li>";
-        for(var f in newItems[0]){
-          html += "<div class='sense-search-result-cell' style='width: "+columnWidth+"%'>";
-          html += "<strong>"+f+"</strong>"
-          html += "</div>";
-        }
-        html += "</li>";
-        for (var i=0;i<newItems.length;i++){
+        if(this.data.length > 0){
+          var rList = document.getElementById(this.id+"_ul");
+          if(!rList){
+            rList = document.createElement("ul");
+            rList.id = this.id+"_ul";
+            document.getElementById(this.id+"_results").appendChild(rList);
+          }
+          var html = "";
+          var columnCount = 0;
+          for(var c in newItems[0]){
+            columnCount++;
+          }
+          var columnWidth = Math.floor(100 / columnCount);
+          //draw header row
           html += "<li>";
-          for(var f in newItems[i]){
+          for(var f in newItems[0]){
             html += "<div class='sense-search-result-cell' style='width: "+columnWidth+"%'>";
-            html += newItems[i][f].html;
+            html += "<strong>"+f+"</strong>"
             html += "</div>";
           }
           html += "</li>";
+          for (var i=0;i<newItems.length;i++){
+            html += "<li>";
+            for(var f in newItems[i]){
+              html += "<div class='sense-search-result-cell' style='width: "+columnWidth+"%'>";
+              html += newItems[i][f].html;
+              html += "</div>";
+            }
+            html += "</li>";
+          }
+          document.getElementById(this.id+"_ul").innerHTML = html;
         }
-        html += "</ul>"
-        document.getElementById(this.id+"_results").innerHTML = html;
+        else{
+          html = "<h1>No Results</h1>";
+          document.getElementById(this.id+"_results").innerHTML = html;
+        }
       }
     }
   });
@@ -939,6 +999,8 @@ var SenseSearch = (function(){
   function SenseSearch(){
     this.ready = new Subscription();
     this.searchResults = new Subscription();
+    this.searchAssociations = new Subscription();
+    this.noResults = new Subscription();
     this.suggestResults = new Subscription();
     this.cleared = new Subscription();
   }
@@ -1031,22 +1093,35 @@ var SenseSearch = (function(){
       }
     },
     search: {
-      value: function(searchText, searchFields, context){
+      value: function(searchText, searchFields, mode, context){
         var that = this;
+        mode = mode || "simple";
+        context = context || this.context || "LockedFieldsOnly"
         this.pendingSearch = this.exchange.seqId+1;
         this.terms = searchText.split(" ");
-        this.exchange.ask(this.appHandle, "SearchAssociations", [{qContext: context || this.context || "LockedFieldsOnly", qSearchFields: searchFields}, this.terms, {qOffset: 0, qCount: 5, qMaxNbrFieldMatches: 5}], function(response){
+        this.exchange.ask(this.appHandle, "SearchAssociations", [{qContext: context, qSearchFields: searchFields}, this.terms, {qOffset: 0, qCount: 5, qMaxNbrFieldMatches: 5}], function(response){
           if(response.id == that.pendingSearch){
             if(searchText== "" || response.result.qResults.qTotalSearchResults>0){
-              that.exchange.ask(that.appHandle, "SelectAssociations", [{qContext: context || that.context || "LockedFieldsOnly", qSearchFields: searchFields}, that.terms, 0], function(response){
-                that.searchResults.deliver(response.change);
-              });
+              if(mode=="simple"){
+                that.selectAssociations(searchFields, context, 0);
+              }
+              else{
+                that.searchAssociations.deliver(response.result);
+              }
             }
             else{
               //we send a no results instruction
-              
+              that.noResults.deliver();
             }
           }
+        });
+      }
+    },
+    selectAssociations: {
+      value: function(searchFields, context, resultGroup){
+        var that = this;
+        that.exchange.ask(that.appHandle, "SelectAssociations", [{qContext: context, qSearchFields: searchFields}, that.terms, resultGroup], function(response){
+          that.searchResults.deliver(response.change);
         });
       }
     },
@@ -1068,6 +1143,14 @@ var SenseSearch = (function(){
       }
     },
     searchResults:{
+      writable: true,
+      value: null
+    },
+    searchAssociations:{
+      writable: true,
+      value: null
+    },
+    noResults:{
       writable: true,
       value: null
     },

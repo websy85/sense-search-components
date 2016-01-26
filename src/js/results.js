@@ -39,7 +39,7 @@ var SenseSearchResult = (function(){
       value: false
     },
     attach:{
-      value: function(options){
+      value: function(options, callbackFn){
         var that = this;
         if(options){
           for(var o in options){
@@ -50,8 +50,12 @@ var SenseSearchResult = (function(){
           var hDef = this.buildHyperCubeDef();
           senseSearch.exchange.ask(senseSearch.appHandle, "CreateSessionObject", [hDef], function(response){
             that.handle = response.result.qReturn.qHandle;
+            if(typeof(callbackFn)==="function"){
+              callbackFn.call(null);
+            }
           });
           senseSearch.searchResults.subscribe(this.onSearchResults.bind(this));
+          senseSearch.noResults.subscribe(this.onNoResults.bind(this));
           senseSearch.results[this.id] = this;
         }
       }
@@ -104,7 +108,13 @@ var SenseSearchResult = (function(){
     onSearchResults:{
       value: function(results){
         this.data = []; //after each new search we clear out the previous results
+        this.pageTop = 0;
         this.getHyperCubeData();
+      }
+    },
+    onNoResults: {
+      value:  function(){
+        this.renderItems([]);
       }
     },
     getNextBatch:{
@@ -136,7 +146,7 @@ var SenseSearchResult = (function(){
               }
               items.push(item);
             }
-            that.data.concat(items);
+            that.data = that.data.concat(items);
             that.renderItems(items);
           });
         });
@@ -181,31 +191,42 @@ var SenseSearchResult = (function(){
     },
     renderItems:{
       value: function(newItems){
-        var html = "<ul>";
-        var columnCount = 0;
-        for(var c in newItems[0]){
-          columnCount++;
-        }
-        var columnWidth = Math.floor(100 / columnCount);
-        //draw header row
-        html += "<li>";
-        for(var f in newItems[0]){
-          html += "<div class='sense-search-result-cell' style='width: "+columnWidth+"%'>";
-          html += "<strong>"+f+"</strong>"
-          html += "</div>";
-        }
-        html += "</li>";
-        for (var i=0;i<newItems.length;i++){
+        if(this.data.length > 0){
+          var rList = document.getElementById(this.id+"_ul");
+          if(!rList){
+            rList = document.createElement("ul");
+            rList.id = this.id+"_ul";
+            document.getElementById(this.id+"_results").appendChild(rList);
+          }
+          var html = "";
+          var columnCount = 0;
+          for(var c in newItems[0]){
+            columnCount++;
+          }
+          var columnWidth = Math.floor(100 / columnCount);
+          //draw header row
           html += "<li>";
-          for(var f in newItems[i]){
+          for(var f in newItems[0]){
             html += "<div class='sense-search-result-cell' style='width: "+columnWidth+"%'>";
-            html += newItems[i][f].html;
+            html += "<strong>"+f+"</strong>"
             html += "</div>";
           }
           html += "</li>";
+          for (var i=0;i<newItems.length;i++){
+            html += "<li>";
+            for(var f in newItems[i]){
+              html += "<div class='sense-search-result-cell' style='width: "+columnWidth+"%'>";
+              html += newItems[i][f].html;
+              html += "</div>";
+            }
+            html += "</li>";
+          }
+          document.getElementById(this.id+"_ul").innerHTML = html;
         }
-        html += "</ul>"
-        document.getElementById(this.id+"_results").innerHTML = html;
+        else{
+          html = "<h1>No Results</h1>";
+          document.getElementById(this.id+"_results").innerHTML = html;
+        }
       }
     }
   });
