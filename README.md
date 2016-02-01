@@ -1,5 +1,5 @@
 ## Sense Search Components
-A collection of HTML/JavaScript APIs that allow you to leverage the power of the Qlik Sense QIX engine to embed search in to a Web application.
+A collection of HTML/JavaScript components that allow you to leverage the power of the Qlik Sense QIX engine to embed search in to a Web application.
 
 The components can be used with the Qlik Sense Capability API, a QSocks implementation or on own their own.
 
