@@ -3,7 +3,7 @@ A collection of HTML/JavaScript components that allow you to leverage the power 
 
 The components can be used with the Qlik Sense Capability API, a QSocks implementation or on own their own.
 
-Below is a quick start guide, for more details please see the [Wiki](https://github.com/websy85/sense-search-components/wiki). If you think there's anything missing please let me know.
+Below is a quick start guide, for more details please see the [Wiki](https://github.com/websy85/sense-search-components/wiki){:target="_blank"}. If you think there's anything missing please let me know.
 
 ####Getting Started
 To include the Sense Search Components in your Web application you will need to include references to the JavaScript API and the CSS file for styling. Be sure to add the JavaScript file at the end of the HTML body
