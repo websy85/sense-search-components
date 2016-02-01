@@ -156,7 +156,7 @@ var SenseSearchInput = (function(){
     },
     mode: {
       writable: true,
-      value: "simple"
+      value: "associations"
     },
     onClear: {
       value: function(){
