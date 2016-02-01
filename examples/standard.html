@@ -2,60 +2,72 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Search Testing</title>
+    <title>Search Example - Simple</title>
     <link rel="stylesheet" href="sense-search.min.css"/>
   </head>
   <body style="width: 80%; margin: 20px auto; font-family: arial;">
-    <h2>Search using it's own connection</h2>
+    <h2>Search Example - Simple</h2>
+    <p>
+      This example uses Branch Project data. A field has been added to the data model which concatenates the following fields into a single string - <strong>title, short_description, project_user, category, product</strong> and <strong>tags</strong>. We then search only on that new field.
+    </p>
+    <p>
+      The Search Input and Search results have been added via HTML.
+    </p>
     <sense-search-input id="myInput" mode="simple"></sense-search-input>
     <sense-search-results id="myResults"></sense-search-results>
-  </body>
-  <script type="text/javascript" src="../build/sense-search.js"></script>
-  <script type="text/javascript">
+    <script type="text/javascript" src="sense-search.min.js"></script>
+    <script type="text/javascript">
 
-    var config = {
-      host: "localhost",
-      port: "4848",
-      app: "Branch 2.0"
-    };
+      var config = {
+        host: "branch.qlik.com",
+        prefix: "/anon",
+        isSecure: true,
+        app: "afb10cca-6153-474c-94f2-7b24d8828704"
+      };
 
-    senseSearch.connect(config, function(){
-      var options = {
-        "fields":[
-          {
-            "dimension": "title",
-            "suppressNull": true
-          },
-          {
-            "dimension": "username",
-            "suppressNull": false
-          },
-          {
-            "dimension": "tags",
-            "suppressNull": false
-          }
-        ],
-        "sortOptions": {
-          "title": {
-            "id": "title",
-            "name": "Title",
-            "order": 1,
-            "field": "title",
-            "sortType": "qSortByAscii"
-          }
-        },
-        "defaultSort": "title"
-      }
-      senseSearch.results["myResults"].attach(options, function(){
-        //senseSearch.results["myResults"].getNextBatch();
+      senseSearch.connect(config, function(){
+        var resultOptions = {
+           "fields":[
+              {
+                "dimension": "title",
+                "suppressNull": true
+              },
+              {
+                "dimension": "username",
+                "suppressNull": false
+              },
+              {
+                "dimension": "tags",
+                "suppressNull": false
+              },
+              {
+                "dimension": "short_description",
+                "suppressNull": false
+              },
+              {
+                "measure": "sum({$<approved={'true'}>}points)",
+                "label": "points",
+                "sortType" : "qSortByNumeric",
+                "order" : -1
+              }
+           ],
+           "sortOptions": {
+             "title": {
+                "name": "A-Z",
+                "order": 1,
+                "field": "title",
+                "sortType": "qSortByAscii"
+              }
+           },
+           "defaultSort": "title"
+        }
+        var inputOptions = {
+          "searchFields": ["SearchField"],
+          "suggestFields": ["title","username","tags","category","product","short_description"]
+        }
+        senseSearch.inputs["myInput"].attach(inputOptions);
+        senseSearch.results["myResults"].attach(resultOptions);
       });
-      // var inputOptions = {
-      //   searchFields: ["SearchField"],
-      //   suggestFields: ["title","username","tags","category","product"]
-      // };
-      // senseSearch.inputs["myInput"].attach(inputOptions);
-    });
-
-
-  </script>
+    </script>
+  </body>
 </html>

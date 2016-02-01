@@ -171,9 +171,7 @@ var SenseSearchInput = (function(){
       }
     },
     onSearchAssociations:{
-      value: function(associations){
-        console.log("associations");
-        console.log(associations);
+      value: function(associations){        
         this.associations = associations.qResults;
         this.showAssociations();
       }
