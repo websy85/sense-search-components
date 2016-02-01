@@ -1,6 +1,6 @@
 .sense-search-input-container{
   position: relative;
-  height: 40px;
+
   .sense-search-input-main{
       height: 40px;
       position: relative;
@@ -87,12 +87,40 @@
   }
   .sense-search-association-container{
     display: none;
+    border: 1px solid @light-grey;
+    border-top: none;
+    background-color: rgba(255,255,255,0.9);
     ul{
       list-style-type: none;
       margin: 0;
       padding: 0;
       li{
-        height: 40px;
+        cursor: pointer;
+        padding: 0 15px;
+        margin-bottom: 2px;
+        font-size: 12px;
+        border-bottom: 1px solid @light-grey;
+        &:last-of-type{
+          border-bottom: none;
+        }
+        h1{
+          font-size: 12px;
+        }
+        div{
+          display: inline-block;
+          padding: 3px;
+          vertical-align: top;
+          &:first-of-type{
+            margin-left: -3px;
+          }
+          &:last-of-type{
+            margin-right: -3px;
+          }
+          &.small{
+            width: 20%;
+          }
+        }
+        min-height: 40px;
         &:hover{
           background-color: @light-grey;
         }

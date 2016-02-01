@@ -115,7 +115,7 @@ var SenseSearch = (function(){
           if(response.id == that.pendingSearch){
             if(searchText== "" || response.result.qResults.qTotalSearchResults>0){
               if(mode=="simple"){
-                that.selectAssociations(searchFields, context, 0);
+                that.selectAssociations(searchFields, 0, context);
               }
               else{
                 that.searchAssociations.deliver(response.result);
@@ -130,7 +130,8 @@ var SenseSearch = (function(){
       }
     },
     selectAssociations: {
-      value: function(searchFields, context, resultGroup){
+      value: function(searchFields, resultGroup, context){
+        context = context || this.context || "LockedFieldsOnly"
         var that = this;
         that.exchange.ask(that.appHandle, "SelectAssociations", [{qContext: context, qSearchFields: searchFields}, that.terms, resultGroup], function(response){
           that.searchResults.deliver(response.change);

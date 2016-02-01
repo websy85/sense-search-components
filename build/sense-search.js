@@ -198,15 +198,28 @@ var SenseSearchInput = (function(){
         console.log(event);
         if(event.target.classList.contains('sense-search-input-clear')){
           //the clear button was clicked
-          event.stopPropagation();
           this.clear();
         }
         else if (event.target.classList.contains('sense-search-suggestion-item')) {
           //a suggestion was clicked
-          event.stopPropagation();
           this.activeSuggestion = parseInt(event.target.attributes['data-index'].value);
           this.drawGhost(); //this gets the text ready for using as the new value
           this.acceptSuggestion();
+        }
+        else if (event.target.classList.contains('sense-search-association-item') || event.target.parentNode.classList.contains('sense-search-association-item')) {
+          //an association was clicked
+          var assocationIndex;
+          if(event.target.classList.contains('sense-search-association-item')){
+            //the li element was clicked
+            assocationIndex = parseInt(event.target.attributes['data-index'].value);
+          }
+          else{
+            //a child was clicked
+            assocationIndex = parseInt(event.target.parentNode.attributes['data-index'].value);
+          }
+          senseSearch.selectAssociations(this.searchFields || [],  assocationIndex);
+          this.hideAssociations();
+          this.hideSuggestions();
         }
       }
     },
@@ -247,17 +260,19 @@ var SenseSearchInput = (function(){
               event.preventDefault();
               return false;
             }
-            else if($scope.searchText.split(" ").pop().length==1){
+            else if(this.searchText.split(" ").pop().length==1){
               alert('cannot search for single character strings');
               event.preventDefault();
               return false;
             }
             else{
               this.hideSuggestions();
+              this.hideAssociations();
             }
           }
           else{
             this.hideSuggestions();
+            this.hideAssociations();
           }
       }
     },
@@ -333,14 +348,26 @@ var SenseSearchInput = (function(){
         for (var i=0;i<this.associations.qSearchTermsMatched.length;i++){ //loops through each search term match group
           var termsMatched = this.associations.qSearchTermsMatched[i];
           for (var j=0;j<termsMatched.length;j++){  //loops through each valid association
-            html += "<li>";
+            html += "<li class='sense-search-association-item' data-index='"+j+"'>";
             for(var k=0;k<termsMatched[j].qFieldMatches.length;k++){  //loops through each field in the association
+              var extraClass = termsMatched[j].qFieldMatches.length>1?"small":"";
               var fieldMatch = termsMatched[j].qFieldMatches[k];
-              html += "<div>";
-              html += this.associations.qFieldNames[fieldMatch.qField];
+              var fieldName = this.associations.qFieldNames[fieldMatch.qField];
+              var fieldValues = [];
+              for (var v in fieldMatch.qValues){
+                var highlightedValue = highlightAssociationValue(this.associations.qFieldDictionaries[fieldMatch.qField].qResult[v], fieldMatch.qTerms);
+                fieldValues.push(highlightedValue);
+              }
+              html += "<div class='"+extraClass+"'>";
+              html += "<h1>"+fieldName+"</h1>";
+              for (var v=0; v < fieldValues.length; v++){
+                html += fieldValues[v];
+                if(v < fieldValues.length-1){
+                  html += ", ";
+                }
+              }
               html += "</div>";
             }
-            html += j
             html += "</li>";
           }
         }
@@ -350,7 +377,7 @@ var SenseSearchInput = (function(){
     },
     hideAssociations: {
       value: function(){
-
+        document.getElementById(this.id+"_associations").style.display = "none";
       }
     },
     startSuggestionTimeout:{
@@ -455,6 +482,17 @@ var SenseSearchInput = (function(){
     }
   });
 
+  function highlightAssociationValue(match){
+    var text = match.qText;
+    text = text.split("");
+    for (var r = match.qRanges.length-1; r>-1;r--){
+      text.splice((match.qRanges[r].qCharPos+match.qRanges[r].qCharCount), 0, "</span>")
+      text.splice(match.qRanges[r].qCharPos, 0, "<span class='highlight"+match.qRanges[r].qTerm+"'>");
+    }
+    text = text.join("");
+    return text;
+  };
+
   function getGhostString(query, suggestion){
     var suggestBase = query;
     if(suggestion.toLowerCase().indexOf(suggestBase.toLowerCase())!=-1){
@@ -539,6 +577,7 @@ var SenseSearchResult = (function(){
           });
           senseSearch.searchResults.subscribe(this.onSearchResults.bind(this));
           senseSearch.noResults.subscribe(this.onNoResults.bind(this));
+          senseSearch.cleared.subscribe(this.onClear.bind(this));
           senseSearch.results[this.id] = this;
         }
       }
@@ -598,6 +637,11 @@ var SenseSearchResult = (function(){
     onNoResults: {
       value:  function(){
         this.renderItems([]);
+      }
+    },
+    onClear:{
+      value: function(){
+        document.getElementById(this.id+"_results").innerHTML = "";
       }
     },
     getNextBatch:{
@@ -1103,7 +1147,7 @@ var SenseSearch = (function(){
           if(response.id == that.pendingSearch){
             if(searchText== "" || response.result.qResults.qTotalSearchResults>0){
               if(mode=="simple"){
-                that.selectAssociations(searchFields, context, 0);
+                that.selectAssociations(searchFields, 0, context);
               }
               else{
                 that.searchAssociations.deliver(response.result);
@@ -1118,7 +1162,8 @@ var SenseSearch = (function(){
       }
     },
     selectAssociations: {
-      value: function(searchFields, context, resultGroup){
+      value: function(searchFields, resultGroup, context){
+        context = context || this.context || "LockedFieldsOnly"
         var that = this;
         that.exchange.ask(that.appHandle, "SelectAssociations", [{qContext: context, qSearchFields: searchFields}, that.terms, resultGroup], function(response){
           that.searchResults.deliver(response.change);

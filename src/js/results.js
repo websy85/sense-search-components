@@ -56,6 +56,7 @@ var SenseSearchResult = (function(){
           });
           senseSearch.searchResults.subscribe(this.onSearchResults.bind(this));
           senseSearch.noResults.subscribe(this.onNoResults.bind(this));
+          senseSearch.cleared.subscribe(this.onClear.bind(this));
           senseSearch.results[this.id] = this;
         }
       }
@@ -115,6 +116,11 @@ var SenseSearchResult = (function(){
     onNoResults: {
       value:  function(){
         this.renderItems([]);
+      }
+    },
+    onClear:{
+      value: function(){
+        document.getElementById(this.id+"_results").innerHTML = "";
       }
     },
     getNextBatch:{
