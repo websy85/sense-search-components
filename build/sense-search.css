@@ -161,4 +161,8 @@
 }
 .sense-search-results-container .sense-search-results .sense-search-result-cell {
   display: inline-block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-wrap: normal;
+  white-space: nowrap;
 }
