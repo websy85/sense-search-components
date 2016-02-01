@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Search Testing</title>
+    <link rel="stylesheet" href="sense-search.min.css"/>
+  </head>
+  <body style="width: 80%; margin: 20px auto; font-family: arial;">
+    <h2>Search using it's own connection</h2>
+    <sense-search-input id="myInput" mode="associations"></sense-search-input>
+    <sense-search-results id="myResults"></sense-search-results>
+  </body>
+  <script type="text/javascript" src="../build/sense-search.js"></script>
+  <script type="text/javascript">
+
+    var config = {
+      host: "localhost",
+      port: "4848",
+      app: "Branch 2.0"
+    };
+
+    senseSearch.connect(config, function(){
+      var options = {
+        "fields":[
+          {
+            "dimension": "title",
+            "suppressNull": true
+          },
+          {
+            "dimension": "username",
+            "suppressNull": false
+          },
+          {
+            "dimension": "tags",
+            "suppressNull": false
+          }
+        ],
+        "sortOptions": {
+          "title": {
+            "id": "title",
+            "name": "Title",
+            "order": 1,
+            "field": "title",
+            "sortType": "qSortByAscii"
+          }
+        },
+        "defaultSort": "title"
+      }
+      senseSearch.results["myResults"].attach(options, function(){
+        //senseSearch.results["myResults"].getNextBatch();
+      });
+      // var inputOptions = {
+      //   searchFields: ["SearchField"],
+      //   suggestFields: ["title","username","tags","category","product"]
+      // };
+      // senseSearch.inputs["myInput"].attach(inputOptions);
+    });
+
+
+  </script>
+</html>

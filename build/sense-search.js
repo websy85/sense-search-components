@@ -31,6 +31,8 @@ var SenseSearchInput = (function(){
       SPACE: 32
   };
 
+  var templateHtml = "<div class='sense-search-input-main'><div id='{id}_ghost' class='sense-search-input-bg'></div><input id='{id}_input' autofocus placeholder='Please wait...' disabled='disabled' type='text' autocorrect='off' autocomplete='off' autocapitalize='off' spellcheck='false' /><div class='sense-search-lozenge-container'></div><button type='button' class='sense-search-input-clear'>x</button></div><div id='{id}_suggestions' class='sense-search-suggestion-container'><ul id='{id}_suggestionList'></ul></div><div id='{id}_associations' class='sense-search-association-container'><ul id='{id}_associationsList'></ul></div>";
+
   function SenseSearchInput(id, options){
     var element = document.createElement("div");
     element.id = id;
@@ -67,10 +69,9 @@ var SenseSearchInput = (function(){
     this.searchTimeout = this.searchTimeout || 300;
     this.suggestTimeout = this.suggestTimeout || 100;
     senseSearch.ready.subscribe(this.activate.bind(this));
+    senseSearch.cleared.subscribe(this.onClear.bind(this));
     return {element: element, object: this};
   }
-
-  var templateHtml = "<div class=''><div id='{id}_ghost' class='sense-search-input-bg'></div><input id='{id}_input' autofocus placeholder='Please wait...' disabled='disabled' type='text' autocorrect='off' autocomplete='off' autocapitalize='off' spellcheck='false' /><div class='sense-search-lozenge-container'></div><button type='button' class='sense-search-input-clear'>x</button></div><div id='{id}_suggestions' class='sense-search-suggestion-container'><ul></ul></div>";
 
   SenseSearchInput.prototype = Object.create(Object.prototype, {
     id:{
@@ -85,6 +86,7 @@ var SenseSearchInput = (function(){
           }
         }
         if(senseSearch && senseSearch.exchange.connection){
+          senseSearch.searchAssociations.subscribe(this.onSearchAssociations.bind(this));
           senseSearch.suggestResults.subscribe(this.onSuggestResults.bind(this));
           if(!senseSearch.inputs[this.id]){
             senseSearch.inputs[this.id] = this;
@@ -152,15 +154,37 @@ var SenseSearchInput = (function(){
       writable: true,
       value: 0
     },
+    mode: {
+      writable: true,
+      value: "simple"
+    },
+    onClear: {
+      value: function(){
+        document.getElementById(this.id+'_input').value = "";
+        this.searchText = "";
+        this.hideSuggestions();
+      }
+    },
     onSearchResults:{
       value: function(){
 
+      }
+    },
+    onSearchAssociations:{
+      value: function(associations){
+        console.log("associations");
+        console.log(associations);
+        this.associations = associations.qResults;
+        this.showAssociations();
       }
     },
     onSuggestResults:{
       value: function(suggestions){
         this.suggestions = suggestions.qSuggestions;
         this.suggestions.splice(5, suggestions.qSuggestions.length - 4);
+        if(this.suggestions.length > 0){
+          this.activeSuggestion = 0;
+        }
         this.showSuggestions();
       }
     },
@@ -170,8 +194,33 @@ var SenseSearchInput = (function(){
       }
     },
     onClick:{
-      value: function(){
-        console.log('click');
+      value: function(event){
+        console.log(event);
+        if(event.target.classList.contains('sense-search-input-clear')){
+          //the clear button was clicked
+          this.clear();
+        }
+        else if (event.target.classList.contains('sense-search-suggestion-item')) {
+          //a suggestion was clicked
+          this.activeSuggestion = parseInt(event.target.attributes['data-index'].value);
+          this.drawGhost(); //this gets the text ready for using as the new value
+          this.acceptSuggestion();
+        }
+        else if (event.target.classList.contains('sense-search-association-item') || event.target.parentNode.classList.contains('sense-search-association-item')) {
+          //an association was clicked
+          var assocationIndex;
+          if(event.target.classList.contains('sense-search-association-item')){
+            //the li element was clicked
+            assocationIndex = parseInt(event.target.attributes['data-index'].value);
+          }
+          else{
+            //a child was clicked
+            assocationIndex = parseInt(event.target.parentNode.attributes['data-index'].value);
+          }
+          senseSearch.selectAssociations(this.searchFields || [],  assocationIndex);
+          this.hideAssociations();
+          this.hideSuggestions();
+        }
       }
     },
     onKeyDown: {
@@ -185,15 +234,15 @@ var SenseSearchInput = (function(){
             this.showSuggestions();
           }
           else if(event.keyCode == Key.RIGHT){
-            //activate the next suggestion
             if(this.suggesting){
+              //activate the next suggestion
               event.preventDefault();
               this.nextSuggestion();
             }
           }
           else if(event.keyCode == Key.LEFT){
-            //activate the previous suggestion
             if(this.suggesting){
+              //activate the previous suggestion
               event.preventDefault();
               this.prevSuggestion();
             }
@@ -211,17 +260,19 @@ var SenseSearchInput = (function(){
               event.preventDefault();
               return false;
             }
-            else if($scope.searchText.split(" ").pop().length==1){
+            else if(this.searchText.split(" ").pop().length==1){
               alert('cannot search for single character strings');
               event.preventDefault();
               return false;
             }
             else{
               this.hideSuggestions();
+              this.hideAssociations();
             }
           }
           else{
             this.hideSuggestions();
+            this.hideAssociations();
           }
       }
     },
@@ -236,8 +287,22 @@ var SenseSearchInput = (function(){
             if(this.searchText && this.searchText.length > 0){
               //we'll check here to make sure the latest term is at least 2 characters before searching
               if(this.searchText.split(" ").pop().length>1){
-                this.search();
-                this.suggest();
+                var that = this;
+                if(this.searchTimeoutFn){
+                  clearTimeout(this.searchTimeoutFn);
+                }
+                this.searchTimeoutFn = setTimeout(function(){
+                  that.search();
+                }, this.searchTimeout);
+
+                if(this.searchText.length > 1 && this.cursorPosition==this.searchText.length){
+                  if(this.suggestTimeoutFn){
+                    clearTimeout(this.suggestTimeoutFn);
+                  }
+                  this.suggestTimeoutFn = setTimeout(function(){
+                    that.suggest();
+                  }, this.suggestTimeout);
+                }
               }
             }
             else{
@@ -249,21 +314,20 @@ var SenseSearchInput = (function(){
     },
     showSuggestions:{
       value: function(){
-        if(this.suggestingTimeoutFn){
-          clearTimeout(this.suggestingTimeoutFn);
-        }
-        this.suggestingTimeoutFn = setTimeout(function(){
-          //close the suggestions after inactivity for [suggestingTimeout] milliseconds
-          this.hideSuggestions.call(this);
-        }.bind(this), this.suggestingTimeout);
+        this.startSuggestionTimeout();
 
         if(this.searchText && this.searchText.length > 1 && this.cursorPosition==this.searchText.length && this.suggestions.length > 0){
           this.suggesting = true;
+          //render the suggested completion
           this.drawGhost();
+          //render the suggestions
+          document.getElementById(this.id+"_suggestions").style.display = "block";
+          this.drawSuggestions();
         }
         else{
           this.suggesting = false;
           this.removeGhost();
+          this.hideSuggestions();
         }
       }
     },
@@ -274,10 +338,62 @@ var SenseSearchInput = (function(){
         this.ghostPart = "";
         this.ghostQuery = "";
         this.ghostDisplay = "";
+        this.removeGhost();
+        document.getElementById(this.id+"_suggestions").style.display = "none";
+      }
+    },
+    showAssociations: {
+      value: function(){
+        var html = "";
+        for (var i=0;i<this.associations.qSearchTermsMatched.length;i++){ //loops through each search term match group
+          var termsMatched = this.associations.qSearchTermsMatched[i];
+          for (var j=0;j<termsMatched.length;j++){  //loops through each valid association
+            html += "<li class='sense-search-association-item' data-index='"+j+"'>";
+            for(var k=0;k<termsMatched[j].qFieldMatches.length;k++){  //loops through each field in the association
+              var extraClass = termsMatched[j].qFieldMatches.length>1?"small":"";
+              var fieldMatch = termsMatched[j].qFieldMatches[k];
+              var fieldName = this.associations.qFieldNames[fieldMatch.qField];
+              var fieldValues = [];
+              for (var v in fieldMatch.qValues){
+                var highlightedValue = highlightAssociationValue(this.associations.qFieldDictionaries[fieldMatch.qField].qResult[v], fieldMatch.qTerms);
+                fieldValues.push(highlightedValue);
+              }
+              html += "<div class='"+extraClass+"'>";
+              html += "<h1>"+fieldName+"</h1>";
+              for (var v=0; v < fieldValues.length; v++){
+                html += fieldValues[v];
+                if(v < fieldValues.length-1){
+                  html += ", ";
+                }
+              }
+              html += "</div>";
+            }
+            html += "</li>";
+          }
+        }
+        document.getElementById(this.id+"_associationsList").innerHTML = html;
+        document.getElementById(this.id+"_associations").style.display = "block";
+      }
+    },
+    hideAssociations: {
+      value: function(){
+        document.getElementById(this.id+"_associations").style.display = "none";
+      }
+    },
+    startSuggestionTimeout:{
+      value: function(){
+        if(this.suggestingTimeoutFn){
+          clearTimeout(this.suggestingTimeoutFn);
+        }
+        this.suggestingTimeoutFn = setTimeout(function(){
+          //close the suggestions after inactivity for [suggestingTimeout] milliseconds
+          this.hideSuggestions.call(this);
+        }.bind(this), this.suggestingTimeout);
       }
     },
     nextSuggestion:{
       value: function(){
+        this.startSuggestionTimeout();
         if(this.activeSuggestion==this.suggestions.length-1){
           this.activeSuggestion = 0;
         }
@@ -285,10 +401,12 @@ var SenseSearchInput = (function(){
           this.activeSuggestion++;
         }
         this.drawGhost();
+        this.highlightActiveSuggestion();
       }
     },
     prevSuggestion: {
       value: function(){
+        this.startSuggestionTimeout();
         if(this.activeSuggestion==0){
           this.activeSuggestion = this.suggestions.length-1;
         }
@@ -296,38 +414,26 @@ var SenseSearchInput = (function(){
           this.activeSuggestion--;
         }
         this.drawGhost();
+        this.highlightActiveSuggestion();
       }
     },
     acceptSuggestion:{
       value: function(){
         this.searchText = this.ghostQuery;
         this.suggestions = [];
-        this.hideSuggestion();
+        this.hideSuggestions();
+        document.getElementById(this.id+'_input').value = this.searchText;
         this.search();
       }
     },
     search:{
       value: function(){
-        var that = this;
-        if(this.searchTimeoutFn){
-          clearTimeout(this.searchTimeoutFn);
-        }
-        this.searchTimeoutFn = setTimeout(function(){
-          senseSearch.search(that.searchText, that.searchFields || []);
-        }, this.searchTimeout);
+        senseSearch.search(this.searchText, this.searchFields || [], this.mode);
       }
     },
     suggest:{
       value: function(){
-        var that = this;
-        if(this.searchText.length > 1 && this.cursorPosition==this.searchText.length){
-          if(this.suggestTimeoutFn){
-            clearTimeout(this.suggestTimeoutFn);
-          }
-          this.suggestTimeoutFn = setTimeout(function(){
-            senseSearch.suggest(that.searchText, that.suggestFields || []);
-          }, this.suggestTimeout);
-        }
+        senseSearch.suggest(this.searchText, this.suggestFields || []);
       }
     },
     drawGhost:{
@@ -343,6 +449,29 @@ var SenseSearchInput = (function(){
         document.getElementById(this.id+"_ghost").innerHTML = "";
       }
     },
+    drawSuggestions:{
+      value: function(){
+        var suggestionsHtml = "";
+        for (var i=0;i<this.suggestions.length;i++){
+          suggestionsHtml += "<li id='"+this.id+"_suggestion_"+i+"' class='sense-search-suggestion-item' data-index='"+i+"'>";
+          suggestionsHtml += this.suggestions[i].qValue;
+          suggestionsHtml += "</li>";
+        }
+        document.getElementById(this.id+"_suggestionList").innerHTML = suggestionsHtml;
+        this.highlightActiveSuggestion();
+      }
+    },
+    highlightActiveSuggestion:{
+      value: function(){
+        //remove all previous highlights
+        var parent = document.getElementById(this.id+"_suggestionList");
+        for (var c=0; c < parent.childElementCount;c++){
+          parent.childNodes[c].classList.remove("active");
+        }
+        //add the 'active' class to the current suggestion
+        document.getElementById(this.id+"_suggestion_"+this.activeSuggestion).classList.add("active");
+      }
+    },
     activate:{
       value: function(){
         this.attach();
@@ -352,6 +481,17 @@ var SenseSearchInput = (function(){
       }
     }
   });
+
+  function highlightAssociationValue(match){
+    var text = match.qText;
+    text = text.split("");
+    for (var r = match.qRanges.length-1; r>-1;r--){
+      text.splice((match.qRanges[r].qCharPos+match.qRanges[r].qCharCount), 0, "</span>")
+      text.splice(match.qRanges[r].qCharPos, 0, "<span class='highlight"+match.qRanges[r].qTerm+"'>");
+    }
+    text = text.join("");
+    return text;
+  };
 
   function getGhostString(query, suggestion){
     var suggestBase = query;
@@ -380,12 +520,15 @@ var SenseSearchInput = (function(){
 }());
 
 var SenseSearchResult = (function(){
+
+  var templateHtml = "<div id='{id}_results' class='sense-search-results'></div>";
+
   function SenseSearchResult(id, options){
     var element = document.createElement("div");
     element.id = id;
     element.classList.add("sense-search-results-container");
-    //var html = templateHtml.replace(/{id}/gim, id);
-    //element.innerHTML = html;
+    var html = templateHtml.replace(/{id}/gim, id);
+    element.innerHTML = html;
     options = options || {};
     for(var o in options){
       this[o] = options[o];
@@ -417,7 +560,7 @@ var SenseSearchResult = (function(){
       value: false
     },
     attach:{
-      value: function(options){
+      value: function(options, callbackFn){
         var that = this;
         if(options){
           for(var o in options){
@@ -428,8 +571,13 @@ var SenseSearchResult = (function(){
           var hDef = this.buildHyperCubeDef();
           senseSearch.exchange.ask(senseSearch.appHandle, "CreateSessionObject", [hDef], function(response){
             that.handle = response.result.qReturn.qHandle;
+            if(typeof(callbackFn)==="function"){
+              callbackFn.call(null);
+            }
           });
           senseSearch.searchResults.subscribe(this.onSearchResults.bind(this));
+          senseSearch.noResults.subscribe(this.onNoResults.bind(this));
+          senseSearch.cleared.subscribe(this.onClear.bind(this));
           senseSearch.results[this.id] = this;
         }
       }
@@ -481,6 +629,24 @@ var SenseSearchResult = (function(){
     },
     onSearchResults:{
       value: function(results){
+        this.data = []; //after each new search we clear out the previous results
+        this.pageTop = 0;
+        this.getHyperCubeData();
+      }
+    },
+    onNoResults: {
+      value:  function(){
+        this.renderItems([]);
+      }
+    },
+    onClear:{
+      value: function(){
+        document.getElementById(this.id+"_results").innerHTML = "";
+      }
+    },
+    getNextBatch:{
+      value: function(){
+        this.pageTop += this.pageSize;
         this.getHyperCubeData();
       }
     },
@@ -507,21 +673,8 @@ var SenseSearchResult = (function(){
               }
               items.push(item);
             }
-            this.data = items;
-            var html = "";
-            for (var i=0;i<this.data.length;i++){
-              html += "<div class='sense-search-result'>";
-              for(var f in this.data[i]){
-                html += "<div>";
-                html += "<strong>";
-                html += f;
-                html += ":</strong>";
-                html += this.data[i][f].html;
-                html += "</div>";
-              }
-              html += "</div>";
-            }
-            document.getElementById(that.id).innerHTML = html;
+            that.data = that.data.concat(items);
+            that.renderItems(items);
           });
         });
       }
@@ -560,6 +713,46 @@ var SenseSearchResult = (function(){
         }
         else{
           return text;
+        }
+      }
+    },
+    renderItems:{
+      value: function(newItems){
+        if(this.data.length > 0){
+          var rList = document.getElementById(this.id+"_ul");
+          if(!rList){
+            rList = document.createElement("ul");
+            rList.id = this.id+"_ul";
+            document.getElementById(this.id+"_results").appendChild(rList);
+          }
+          var html = "";
+          var columnCount = 0;
+          for(var c in newItems[0]){
+            columnCount++;
+          }
+          var columnWidth = Math.floor(100 / columnCount);
+          //draw header row
+          html += "<li>";
+          for(var f in newItems[0]){
+            html += "<div class='sense-search-result-cell' style='width: "+columnWidth+"%'>";
+            html += "<strong>"+f+"</strong>"
+            html += "</div>";
+          }
+          html += "</li>";
+          for (var i=0;i<newItems.length;i++){
+            html += "<li>";
+            for(var f in newItems[i]){
+              html += "<div class='sense-search-result-cell' style='width: "+columnWidth+"%'>";
+              html += newItems[i][f].html;
+              html += "</div>";
+            }
+            html += "</li>";
+          }
+          document.getElementById(this.id+"_ul").innerHTML = html;
+        }
+        else{
+          html = "<h1>No Results</h1>";
+          document.getElementById(this.id+"_results").innerHTML = html;
         }
       }
     }
@@ -850,6 +1043,8 @@ var SenseSearch = (function(){
   function SenseSearch(){
     this.ready = new Subscription();
     this.searchResults = new Subscription();
+    this.searchAssociations = new Subscription();
+    this.noResults = new Subscription();
     this.suggestResults = new Subscription();
     this.cleared = new Subscription();
   }
@@ -942,22 +1137,36 @@ var SenseSearch = (function(){
       }
     },
     search: {
-      value: function(searchText, searchFields, context){
+      value: function(searchText, searchFields, mode, context){
         var that = this;
+        mode = mode || "simple";
+        context = context || this.context || "LockedFieldsOnly"
         this.pendingSearch = this.exchange.seqId+1;
         this.terms = searchText.split(" ");
-        this.exchange.ask(this.appHandle, "SearchAssociations", [{qContext: context || this.context || "LockedFieldsOnly", qSearchFields: searchFields}, this.terms, {qOffset: 0, qCount: 5, qMaxNbrFieldMatches: 5}], function(response){
+        this.exchange.ask(this.appHandle, "SearchAssociations", [{qContext: context, qSearchFields: searchFields}, this.terms, {qOffset: 0, qCount: 5, qMaxNbrFieldMatches: 5}], function(response){
           if(response.id == that.pendingSearch){
             if(searchText== "" || response.result.qResults.qTotalSearchResults>0){
-              that.exchange.ask(that.appHandle, "SelectAssociations", [{qContext: context || that.context || "LockedFieldsOnly", qSearchFields: searchFields}, that.terms, 0], function(response){
-                that.searchResults.deliver(response.change);
-              });
+              if(mode=="simple"){
+                that.selectAssociations(searchFields, 0, context);
+              }
+              else{
+                that.searchAssociations.deliver(response.result);
+              }
             }
             else{
-              //we send a clear instruction
-              that.clear();
+              //we send a no results instruction
+              that.noResults.deliver();
             }
           }
+        });
+      }
+    },
+    selectAssociations: {
+      value: function(searchFields, resultGroup, context){
+        context = context || this.context || "LockedFieldsOnly"
+        var that = this;
+        that.exchange.ask(that.appHandle, "SelectAssociations", [{qContext: context, qSearchFields: searchFields}, that.terms, resultGroup], function(response){
+          that.searchResults.deliver(response.change);
         });
       }
     },
@@ -979,6 +1188,14 @@ var SenseSearch = (function(){
       }
     },
     searchResults:{
+      writable: true,
+      value: null
+    },
+    searchAssociations:{
+      writable: true,
+      value: null
+    },
+    noResults:{
       writable: true,
       value: null
     },

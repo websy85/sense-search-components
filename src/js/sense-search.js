@@ -11,6 +11,8 @@ var SenseSearch = (function(){
   function SenseSearch(){
     this.ready = new Subscription();
     this.searchResults = new Subscription();
+    this.searchAssociations = new Subscription();
+    this.noResults = new Subscription();
     this.suggestResults = new Subscription();
     this.cleared = new Subscription();
   }
@@ -103,22 +105,36 @@ var SenseSearch = (function(){
       }
     },
     search: {
-      value: function(searchText, searchFields, context){
+      value: function(searchText, searchFields, mode, context){
         var that = this;
+        mode = mode || "simple";
+        context = context || this.context || "LockedFieldsOnly"
         this.pendingSearch = this.exchange.seqId+1;
         this.terms = searchText.split(" ");
-        this.exchange.ask(this.appHandle, "SearchAssociations", [{qContext: context || this.context || "LockedFieldsOnly", qSearchFields: searchFields}, this.terms, {qOffset: 0, qCount: 5, qMaxNbrFieldMatches: 5}], function(response){
+        this.exchange.ask(this.appHandle, "SearchAssociations", [{qContext: context, qSearchFields: searchFields}, this.terms, {qOffset: 0, qCount: 5, qMaxNbrFieldMatches: 5}], function(response){
           if(response.id == that.pendingSearch){
             if(searchText== "" || response.result.qResults.qTotalSearchResults>0){
-              that.exchange.ask(that.appHandle, "SelectAssociations", [{qContext: context || that.context || "LockedFieldsOnly", qSearchFields: searchFields}, that.terms, 0], function(response){
-                that.searchResults.deliver(response.change);
-              });
+              if(mode=="simple"){
+                that.selectAssociations(searchFields, 0, context);
+              }
+              else{
+                that.searchAssociations.deliver(response.result);
+              }
             }
             else{
-              //we send a clear instruction
-              that.clear();
+              //we send a no results instruction
+              that.noResults.deliver();
             }
           }
+        });
+      }
+    },
+    selectAssociations: {
+      value: function(searchFields, resultGroup, context){
+        context = context || this.context || "LockedFieldsOnly"
+        var that = this;
+        that.exchange.ask(that.appHandle, "SelectAssociations", [{qContext: context, qSearchFields: searchFields}, that.terms, resultGroup], function(response){
+          that.searchResults.deliver(response.change);
         });
       }
     },
@@ -140,6 +156,14 @@ var SenseSearch = (function(){
       }
     },
     searchResults:{
+      writable: true,
+      value: null
+    },
+    searchAssociations:{
+      writable: true,
+      value: null
+    },
+    noResults:{
       writable: true,
       value: null
     },
