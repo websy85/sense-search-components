@@ -64,7 +64,7 @@ senseSearch.connect(config, function(){
 ```
 ####Search Behaviour
 There are 2 available modes for searching, "associations" and "simple". The default mode is "associations".
-##### Assocations
+##### Associations
 In this mode the Search Box will behave like the Search Box in the Qlik Sense client. The engine will return the valid associations that were found using the specified search terms. This allows you to make selections in the desired fields to display the results that you want.
 ##### Simple
 In this mode the Sense Search Components will automatically select the first valid association returned by the engine and automatically display the results for it. When using this mode it's best to create a field specifically for searching and concatinate various fields together.
