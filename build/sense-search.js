@@ -827,6 +827,9 @@ var SenseSearchResult = (function(){
         if(sorting[fields[i].dimension]){
           var sort = {};
           sort[sorting[fields[i].dimension].sortType] = sorting[fields[i].dimension].order;
+          if(sorting[fields[i].dimension].sortExpression){
+            sort.qExpression = sorting[fields[i].dimension].sortExpression;
+          }
           def["qDef"]["qSortCriterias"] = [sort];
         }
         defs.push(def);
