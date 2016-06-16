@@ -57,6 +57,7 @@ var SenseSearchResult = (function(){
           });
           senseSearch.searchResults.subscribe(this.onSearchResults.bind(this));
           senseSearch.noResults.subscribe(this.onNoResults.bind(this));
+          senseSearch.chartResults.subscribe(this.onChartResults.bind(this));
           senseSearch.cleared.subscribe(this.onClear.bind(this));
           senseSearch.results[this.id] = this;
         }
@@ -120,6 +121,22 @@ var SenseSearchResult = (function(){
         this.data = []; //after each new search we clear out the previous results
         this.pageTop = 0;
         this.getHyperCubeData();
+      }
+    },
+    onChartResults:{
+      value: function(genericObject){
+        console.log("Chart created");
+        console.log(genericObject);
+        var chartElem = document.createElement('div');
+        chartElem.classList.add('chart-result');
+        var parentElem = document.getElementById(this.resultsElement);
+        parentElem.innerHTML = "";
+        if(parentElem){
+          parentElem.appendChild(chartElem);
+        }
+        if(senseSearch.exchange.connectionType=="CapabilityAPI"){
+          genericObject.show(chartElem);
+        }
       }
     },
     onNoResults: {

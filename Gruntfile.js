@@ -1,10 +1,10 @@
 module.exports = function(grunt) {
   grunt.initConfig({
     includes: {
-      files:{
-        src: ['sense-search.js'],
-        dest: 'build/',
-        cwd: 'src/js'
+      files: {
+          src: ['sense-search.js'],
+          dest: 'build/',
+          cwd: 'src/js'
       }
     },
     watch: {
@@ -24,9 +24,14 @@ module.exports = function(grunt) {
           yuicompress: false,
           optimization: 2
         },
-        files: {
-          "build/sense-search.css": "src/less/main.less" // destination file and source file
-        }
+        files: [
+          {
+            "build/sense-search.css": "src/less/main.less" // destination file and source file
+          },
+          {
+            "/Users/nwr/2016/Development/Node/nlp-testing/public/sense-search.css": "src/less/main.less" // destination file and source file
+          }
+        ]
       },
       production: {
         options: {
@@ -46,8 +51,9 @@ module.exports = function(grunt) {
     },
     uglify:{
       options : {
-        beautify : false,
-        mangle   : true
+        beautify : true,
+        mangle   : false,
+        compress : false
       },
       build: {
         files: [
@@ -56,7 +62,20 @@ module.exports = function(grunt) {
           },
           {
             'examples/sense-search.min.js': ['build/sense-search.js']
+          },
+          {
+            'build/nlp_compromise.min.js': ['node_modules/nlp_compromise/builds/nlp_compromise.js']
+          },
+          {
+            'examples/nlp_compromise.min.js': ['node_modules/nlp_compromise/builds/nlp_compromise.js']
+          },
+          {
+            '/Users/nwr/2016/Development/Node/nlp-testing/public/nlp_compromise.min.js': ['node_modules/nlp_compromise/builds/nlp_compromise.js']
+          },
+          {
+            '/Users/nwr/2016/Development/Node/nlp-testing/public/sense-search.min.js': ['build/sense-search.js']
           }
+
         ]
       }
     }

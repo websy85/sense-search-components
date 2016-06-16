@@ -16,7 +16,8 @@ var Exchange = (function(){
       this.seqId = this.connection.seqid;
     }
     else if(connectionType=="CapabilityAPI"){
-      this.connection = options;
+      this.connection = options.global.session;
+      this.app = options;
     }
   }
 
@@ -28,6 +29,10 @@ var Exchange = (function(){
     seqId:{
       writable: true,
       value: 0
+    },
+    pendingCallbacks:{
+      writable: true,
+      value: {}
     },
     connection: {
       writable: true,
@@ -50,16 +55,27 @@ var Exchange = (function(){
         }(this.connectionType=="Native")
       }
     },
+    createCapabilityViz: {
+      value: function(){
+
+      }
+    },
     askNative:{
       value: function(handle, method, args, callbackFn){
         var that = this;
         this.seqId++;
+        this.pendingCallbacks[this.seqId] = callbackFn;
         this.connection.ask(handle, method, args, this.seqId, function(response){
           if(response.error){
 
           }
           else{
-            callbackFn.call(null, response);
+            var callback = that.pendingCallbacks[response.id];
+            if(callback){
+              callback.call(null, response);
+              delete that.pendingCallbacks[response.id];
+            }
+            // callbackFn.call(null, response);
           }
         });
       }
