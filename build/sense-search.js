@@ -1136,6 +1136,7 @@ var SenseSearchResult = (function(){
         }
         oldElement.parentNode.removeChild(oldElement);
     }
+    senseSearch.ready.subscribe(this.activate.bind(this));
     return {element: element, object: this};
   }
 
@@ -1148,6 +1149,11 @@ var SenseSearchResult = (function(){
       writable:  true,
       value: false
     },
+    activate:{
+      value: function(){
+        this.attach();
+      }
+    },
     attach:{
       value: function(options, callbackFn){
         var that = this;
@@ -1157,13 +1163,15 @@ var SenseSearchResult = (function(){
           }
         }
         if(senseSearch && senseSearch.exchange.connection){
-          var hDef = this.buildHyperCubeDef();
-          senseSearch.exchange.ask(senseSearch.appHandle, "CreateSessionObject", [hDef], function(response){
-            that.handle = response.result.qReturn.qHandle;
-            if(typeof(callbackFn)==="function"){
-              callbackFn.call(null);
-            }
-          });
+          if(options && options.fields){
+            var hDef = this.buildHyperCubeDef();
+            senseSearch.exchange.ask(senseSearch.appHandle, "CreateSessionObject", [hDef], function(response){
+              that.handle = response.result.qReturn.qHandle;
+              if(typeof(callbackFn)==="function"){
+                callbackFn.call(null);
+              }
+            });
+          }
           senseSearch.searchResults.subscribe(this.onSearchResults.bind(this));
           senseSearch.noResults.subscribe(this.onNoResults.bind(this));
           senseSearch.chartResults.subscribe(this.onChartResults.bind(this));
