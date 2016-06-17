@@ -27,6 +27,7 @@ var SenseSearchResult = (function(){
         }
         oldElement.parentNode.removeChild(oldElement);
     }
+    senseSearch.ready.subscribe(this.activate.bind(this));
     return {element: element, object: this};
   }
 
@@ -38,6 +39,11 @@ var SenseSearchResult = (function(){
     handle:{
       writable:  true,
       value: false
+    },
+    activate:{
+      value: function(){
+        this.attach();
+      }
     },
     attach:{
       value: function(options, callbackFn){
