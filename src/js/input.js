@@ -335,6 +335,10 @@ var SenseSearchInput = (function(){
             }
             else if(this.associations.qFieldNames.length==1){
               terms[t].senseTag = this.associations.qFieldNames[0];
+              terms[t].senseType = "value";
+              terms[t].senseInfo = {
+                field: this.appFields[this.associations.qFieldNames[0]]
+              };
             }
             else{
               terms[t].senseTag = "?";
@@ -344,6 +348,7 @@ var SenseSearchInput = (function(){
             }
           }
           this.buildLozenges();
+          this.nlpViz();
         }
       }
     },
@@ -447,12 +452,12 @@ var SenseSearchInput = (function(){
         term.queryTag = "";
         if(this.nlpModel && this.nlpModel.fieldNounMap[termText]){
           //this is a term that should be translated into a field
-          term.field = this.nlpModel.fieldNounMap[termText];
-          if(this.appFieldsByTag.$measure && this.appFieldsByTag.$measure.indexOf(term.field)!==-1){
+          var mappedField = this.nlpModel.fieldNounMap[termText];
+          if(this.appFieldsByTag.$measure && this.appFieldsByTag.$measure.indexOf(mappedField)!==-1){
             term.queryTag = "measure";
             term.senseType = "measure";
             term.senseInfo = {
-              field: this.appFields[termText]
+              field: this.appFields[mappedField]
             };
           }
           else {
@@ -938,12 +943,12 @@ var SenseSearchInput = (function(){
               break;
             case "value": //currently only supports a single value
               var fieldName = this.nlpTerms[t].senseInfo.field.qName.replace(/ /gi,"-");
-              var set = "<";
+              var set = "";
               set += "[" + this.nlpTerms[t].senseInfo.field.qName + "]";
               set += "={'";
               set += this.nlpTerms[t].text;
               set += "'}";
-              set += ">";
+              set += "";
               sets.push(set);
               break;
             case "sortfield":
@@ -964,8 +969,12 @@ var SenseSearchInput = (function(){
           //if the term either side is an aggregation we use it, otherwise we'll take the default
           var measDef = "num(";
           measDef += aggregation || this.nlpModel.defaultFunction;
-          measDef += "({$"
-          measDef += sets.join(",");
+          measDef += "({$";
+          if(sets.length > 0){
+            measDef += "<";
+            measDef += sets.join(",");
+            measDef += ">";
+          }
           measDef += "}";
           measDef += measures[m].qName;
           measDef += "), '";
