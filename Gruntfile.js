@@ -62,7 +62,7 @@ module.exports = function(grunt) {
           },
           {
             'examples/sense-search.min.js': ['build/sense-search.js']
-          }          
+          }
         ]
       }
     }
