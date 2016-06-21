@@ -40,6 +40,12 @@
         var app = qlik.openApp(config.app, config);
         app.model.waitForOpen.promise.then(function(){
            senseSearch.connectWithCapabilityAPI(app);
+           
+           var inputOptions = {          
+            "searchFields": ["title","username","tags","category","product","short_description"],
+            "suggestFields": ["title","username","tags","category","product","short_description"]
+          }
+          senseSearch.inputs["myInput"].attach(inputOptions);
         });
       });
 
