@@ -171,7 +171,11 @@ var SenseSearch = (function(){
         if(this.exchange.connectionType=="CapabilityAPI"){
           this.exchange.app.visualization.create(def.qInfo.qType, [], def).then(function(chart){
             console.log(chart);
-            that.chartResults.deliver(chart);
+            that.exchange.ask(chart.model.handle, "ApplyPatches", [[{qPath:"/qHyperCubeDef", qOp:"replace", qValue: JSON.stringify(def.qHyperCubeDef)}], true], function(result){
+              chart.model.getLayout().then(function(){
+                that.chartResults.deliver(chart);
+              });
+            });
           })
         }
         else{

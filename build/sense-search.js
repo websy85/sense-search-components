@@ -913,7 +913,7 @@ var SenseSearchInput = (function(){
             }]
           }
         };
-        var dimensions={},measures={},aggregations={},sorting={},sets=[],time=[],aggregation=null;
+        var dimensions={},measures={},fields=[],aggregations={},sorting={},sets=[],time=[],aggregation=null;
         var dimensionIndexMap={},measureIndexMap={};
         var dimensionCount=-1,measureCount=-1;
         var chartType;
@@ -962,8 +962,10 @@ var SenseSearchInput = (function(){
           hDef.qHyperCubeDef.qDimensions.push({
             qDef: {
               qFieldDefs: [dimensions[d].qName]
-            }
+            },
+            qNullSuppression: true
           });
+          fields.push(dimensions[d].qName);
         }
         for(var m in measures){
           //if the term either side is an aggregation we use it, otherwise we'll take the default
@@ -984,9 +986,11 @@ var SenseSearchInput = (function(){
           measDef += "#,##0')";
           hDef.qHyperCubeDef.qMeasures.push({
             qDef: {
-              qDef: measDef
+              qDef: measDef,
+              qLabel: measures[m].qName
             }
           });
+          fields.push(measures[m].qName);
         }
         var sortCount = 0;
         for(var s in sorting){
@@ -1001,7 +1005,10 @@ var SenseSearchInput = (function(){
           }
           else{ //we sort by the first measure desc
             if(hDef.qHyperCubeDef.qMeasures.length>0){
-
+              hDef.qHyperCubeDef.qMeasures[0].qSortBy = {
+                qSortByNumeric: -1
+              }
+              hDef.qHyperCubeDef.qInterColumnSortOrder = [fields.indexOf(hDef.qHyperCubeDef.qMeasures[0].qDef.qLabel)];
             }
             else if(hDef.qHyperCubeDef.qDimensions.length>0){
 
@@ -1902,7 +1909,11 @@ var SenseSearch = (function(){
         if(this.exchange.connectionType=="CapabilityAPI"){
           this.exchange.app.visualization.create(def.qInfo.qType, [], def).then(function(chart){
             console.log(chart);
-            that.chartResults.deliver(chart);
+            that.exchange.ask(chart.model.handle, "ApplyPatches", [[{qPath:"/qHyperCubeDef", qOp:"replace", qValue: JSON.stringify(def.qHyperCubeDef)}], true], function(result){
+              chart.model.getLayout().then(function(){
+                that.chartResults.deliver(chart);
+              });
+            });
           })
         }
         else{
