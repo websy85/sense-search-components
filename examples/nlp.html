@@ -3,74 +3,46 @@
   <head>
     <meta charset="utf-8">
     <title>Search Example - Associations</title>
+    <link rel="stylesheet" href="https://branch.qlik.com/anon/resources/assets/client/client.css">
     <link rel="stylesheet" href="sense-search.min.css"/>
   </head>
   <body style="width: 80%; margin: 20px auto; font-family: arial;">
-    <h2>Search Example - Associations</h2>
+    <h2>Search Example - Visualizations</h2>
     <p>
-      This example uses Branch Project data. It searches and suggests across the following fields <strong>title, short_description, project_user, category, product</strong> and <strong>tags</strong>
+      This example uses Branch Project data. It uses some basic natural language processing to create vizualizations from
+      the specified search terms. For example, try entering 'show me points by title for websy85'.
     </p>
     <p>
-      The Search Input and Search results have been added programatically.
+      It uses the Qlik Sense Capability APIs to visualize the result.
     </p>
-
+    <sense-search-input id="myInput" mode="visualizations"></sense-search-input>
+    <sense-search-results id="myResults"></sense-search-results>
+    <script type="text/javascript" src="https://branch.qlik.com/anon/resources/assets/external/requirejs/require.js"></script>
     <script type="text/javascript" src="sense-search.min.js"></script>
     <script type="text/javascript">
 
       var config = {
-        host: "10.211.55.7",
+        host: "branch.qlik.com",
         prefix: "/anon",
         isSecure: true,
-        app: "33c37b53-4000-4c1a-b297-b5bc3eee0786"
+        app: "079c5cb3-5456-4e3a-ab04-aaaf7ef1b41a"
       };
 
-      var myInput = new SenseSearchInput("myInput");
-      document.getElementsByTagName("body")[0].appendChild(myInput.element);
-      var myResults = new SenseSearchResult("myResults");
-      document.getElementsByTagName("body")[0].appendChild(myResults.element);
-      senseSearch.connect(config, function(){
-         var resultOptions = {
-            "fields":[
-               {
-                 "dimension": "title",
-                 "suppressNull": true
-               },
-               {
-                 "dimension": "username",
-                 "suppressNull": false
-               },
-               {
-                 "dimension": "tags",
-                 "suppressNull": false
-               },
-               {
-                 "dimension": "short_description",
-                 "suppressNull": false
-               },
-               {
-                 "measure": "sum({$<approved={'true'}>}points)",
-                 "label": "points",
-                 "sortType" : "qSortByNumeric",
-                 "order" : -1
-               }
-            ],
-            "sortOptions": {
-              "title": {
-                 "name": "A-Z",
-                 "order": 1,
-                 "field": "title",
-                 "sortType": "qSortByAscii"
-               }
-            },
-            "defaultSort": "title"
-         }
-         var inputOptions = {
-           mode: "visualizations",
-           "searchFields": ["title","short_description","project_user","category","product","tags"],
-           "suggestFields": ["title","short_description","project_user","category","product","tags"]
-         }
-         myInput.object.attach(inputOptions);
-         myResults.object.attach(resultOptions);
+      require.config( {
+          baseUrl: ( config.isSecure ? "https://" : "http://" ) + config.host + (config.port ? ":" + config.port: "") + config.prefix + "resources"
+      });
+
+      require( ["js/qlik"], function ( qlik ) {
+        qlik.setOnError( function ( error ) {
+            alert( error.message );
+        } );
+
+        var app = qlik.openApp(config.app, config);
+        app.model.waitForOpen.promise.then(function(){
+           senseSearch.connectWithCapabilityAPI(app);
+        });
+      });
+
 });
     </script>
   </body>
