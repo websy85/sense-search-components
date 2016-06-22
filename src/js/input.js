@@ -958,7 +958,7 @@ var SenseSearchInput = (function(){
               set += "[" + this.nlpTerms[t].senseInfo.field.qName + "]";
               set += "={'";
               set += this.nlpTerms[t].text;
-              set += "'}";
+              set += "*'}";
               set += "";
               sets.push(set);
               break;
