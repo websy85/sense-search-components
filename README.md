@@ -76,3 +76,5 @@ You can see a 'simple' search example [here](https://rawgit.com/websy85/sense-se
 
 ##### Visualizations
 In this mode you can use a more natural language structure to generate visualizations on the fly. For example, if you type 'sales by rep for 2016', the QIX engine understands that 'sales' is a measure, 'rep' is a dimension and the value '2016' can be found in the year field. The search result in this instance will be a hypercube and if used with the Capability APIs will render a chart as well. You can read more about this mode in the Wiki.
+
+You can see a 'visualizations' search example [here](https://rawgit.com/websy85/sense-search-components/master/examples/nlp.html)
