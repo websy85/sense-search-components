@@ -1966,11 +1966,11 @@ var SenseSearch = (function(){
           }
           this.exchange.app.visualization.create(def.qInfo.qType, fieldArray, defOptions).then(function(chart){
             console.log(chart);
-            // that.exchange.ask(chart.model.handle, "ApplyPatches", [[{qPath:"/qHyperCubeDef", qOp:"replace", qValue: JSON.stringify(defOptions.qHyperCubeDef)}], true], function(result){
-              // chart.model.getLayout().then(function(){
+            that.exchange.ask(chart.model.handle, "ApplyPatches", [[{qPath:"/qHyperCubeDef", qOp:"replace", qValue: JSON.stringify(defOptions.qHyperCubeDef)}], true], function(result){
+              chart.model.getLayout().then(function(){
                 that.chartResults.deliver(chart);
-              // });
-            // });
+              });
+            });
           })
         }
         else{
