@@ -67,14 +67,14 @@ There are 3 available modes for searching, "associations", "simple" and "visuali
 ##### Associations
 In this mode the Search Box will behave like the Search Box in the Qlik Sense client. The engine will return the valid associations that were found using the specified search terms. This allows you to make selections in the desired fields to display the results that you want.
 
-You can see an 'associations' search example [here](https://rawgit.com/websy85/sense-search-components/master/examples/coded.html)
+You can see an 'associations' search example <a href='https://rawgit.com/websy85/sense-search-components/master/examples/coded.html' target='_blank'>here</a>
 
 ##### Simple
 In this mode the Sense Search Components will automatically select the first valid association returned by the engine and display the results for it. When using this mode it's best to create a field specifically for searching and concatinate various fields together.
 
-You can see a 'simple' search example [here](https://rawgit.com/websy85/sense-search-components/master/examples/standard.html)
+You can see a 'simple' search example <a href='https://rawgit.com/websy85/sense-search-components/master/examples/standard.html' target='_blank'>here</a>
 
 ##### Visualizations
 In this mode you can use a more natural language structure to generate visualizations on the fly. For example, if you type 'sales by rep for 2016', the QIX engine understands that 'sales' is a measure, 'rep' is a dimension and the value '2016' can be found in the year field. The search result in this instance will be a hypercube and if used with the Capability APIs will render a chart as well. You can read more about this mode in the Wiki.
 
-You can see a 'visualizations' search example [here](https://rawgit.com/websy85/sense-search-components/master/examples/nlp.html)
+You can see a 'visualizations' search example <a href='https://rawgit.com/websy85/sense-search-components/master/examples/nlp.html' target='_blank'>here</a>
