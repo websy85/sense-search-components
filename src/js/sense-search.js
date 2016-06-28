@@ -200,13 +200,13 @@ var SenseSearch = (function(){
           }
           this.exchange.app.visualization.create(def.qInfo.qType, fieldArray, defOptions).then(function(chart){
             console.log(chart);
-            if(chart.model.layout.wsId == that.pendingChart){
+            // if(chart.model.layout.wsId == that.pendingChart){  //doesn't work in 2.2
               that.exchange.ask(chart.model.handle, "ApplyPatches", [[{qPath:"/qHyperCubeDef", qOp:"replace", qValue: JSON.stringify(defOptions.qHyperCubeDef)}], true], function(result){
                 chart.model.getLayout().then(function(){
                   that.chartResults.deliver(chart);
                 });
               });
-            }
+            // }
           })
         }
         else{
