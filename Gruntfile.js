@@ -51,9 +51,9 @@ module.exports = function(grunt) {
     },
     uglify:{
       options : {
-        beautify : false,
-        mangle   : true,
-        compress : true
+        beautify : true,
+        mangle   : false,
+        compress : false
       },
       build: {
         files: [
