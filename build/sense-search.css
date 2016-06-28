@@ -154,12 +154,16 @@
 .sense-search-input-container .sense-search-lozenge-container .lozenge {
   display: inline-block;
   color: transparent;
-  height: 100%;
+  height: 35px;
   line-height: 40px;
   margin-right: 4px;
   position: relative;
+  width: auto;
 }
-.sense-search-input-container .sense-search-lozenge-container .lozenge:not([data-sensetag="?"]):before {
+.sense-search-input-container .sense-search-lozenge-container .lozenge[data-sensetag] {
+  border-bottom: 2px solid #d9d9d9;
+}
+.sense-search-input-container .sense-search-lozenge-container .lozenge:not([data-querytag^="!"]):after {
   color: #f8981d;
   position: absolute;
   top: 2px;
@@ -167,17 +171,11 @@
   height: 14px;
   line-height: 14px;
   font-size: 10px;
-  content: attr(data-sensetag);
-}
-.sense-search-input-container .sense-search-lozenge-container .lozenge:not([data-querytag^="!"]):after {
-  color: #f8981d;
-  position: absolute;
-  bottom: 2px;
-  left: 0;
-  height: 14px;
-  line-height: 14px;
-  font-size: 10px;
   content: attr(data-querytag);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  width: 100%;
 }
 .sense-search-input-container .sense-search-ambiguity-container {
   position: absolute;
@@ -230,6 +228,7 @@
   display: inline-block;
   list-style-type: none;
   background-color: white;
+  width: 100px;
 }
 .sense-search-input-container .sense-search-ambiguity-container .ambiguity-provision ul li {
   cursor: pointer;
