@@ -45,6 +45,10 @@ var SenseSearchResult = (function(){
         this.attach();
       }
     },
+    attached:{
+      writable:  true,
+      value: false
+    },
     attach:{
       value: function(options, callbackFn){
         var that = this;
@@ -63,10 +67,13 @@ var SenseSearchResult = (function(){
               }
             });
           }
-          senseSearch.searchResults.subscribe(this.onSearchResults.bind(this));
-          senseSearch.noResults.subscribe(this.onNoResults.bind(this));
-          senseSearch.chartResults.subscribe(this.onChartResults.bind(this));
-          senseSearch.cleared.subscribe(this.onClear.bind(this));
+          if(!this.attached){
+            senseSearch.searchResults.subscribe(this.onSearchResults.bind(this));
+            senseSearch.noResults.subscribe(this.onNoResults.bind(this));
+            senseSearch.chartResults.subscribe(this.onChartResults.bind(this));
+            senseSearch.cleared.subscribe(this.onClear.bind(this));
+            this.attached = true;
+          }
           senseSearch.results[this.id] = this;
         }
       }

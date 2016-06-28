@@ -37,6 +37,18 @@ var SenseSearch = (function(){
         }
       }
     },
+    appFields:{
+      writable: true,
+      value: {
+        // fields: {},
+        // dimensions: {},
+        // measures: {}
+      }
+    },
+    appFieldsByTag:{
+      writable: true,
+      value: {}
+    },
     inputs: {
       writable: true,
       value: {}
@@ -170,6 +182,7 @@ var SenseSearch = (function(){
         that.pendingChart = this.exchange.seqId+1;
         if(this.exchange.connectionType=="CapabilityAPI"){
           var fieldArray = [], defOptions = def;
+          def.wsId = that.pendingChart;
           if(def.qInfo.qType=="kpi"){
             defOptions.qHyperCubeDef.qMeasures[0].qDef.measureAxis = {
               min: 0,
@@ -187,11 +200,13 @@ var SenseSearch = (function(){
           }
           this.exchange.app.visualization.create(def.qInfo.qType, fieldArray, defOptions).then(function(chart){
             console.log(chart);
-            that.exchange.ask(chart.model.handle, "ApplyPatches", [[{qPath:"/qHyperCubeDef", qOp:"replace", qValue: JSON.stringify(defOptions.qHyperCubeDef)}], true], function(result){
-              chart.model.getLayout().then(function(){
-                that.chartResults.deliver(chart);
+            if(chart.model.layout.wsId == that.pendingChart){
+              that.exchange.ask(chart.model.handle, "ApplyPatches", [[{qPath:"/qHyperCubeDef", qOp:"replace", qValue: JSON.stringify(defOptions.qHyperCubeDef)}], true], function(result){
+                chart.model.getLayout().then(function(){
+                  that.chartResults.deliver(chart);
+                });
               });
-            });
+            }
           })
         }
         else{
@@ -212,12 +227,113 @@ var SenseSearch = (function(){
     getAppFields:{
       value: function(){
         var that = this;
-        that.exchange.ask(that.appHandle, "CreateSessionObject", [{ qInfo: { qType: "FieldList" }, qFieldListDef: { qShowSystem: true } }], function(response){
+        var CALL_COUNT = 2;
+        var responseData = {
+          fields: null,
+          dimensions: null,
+          measures: null,
+          setCount: 0
+        };
+        //get app fields
+        that.exchange.ask(that.appHandle, "CreateSessionObject", [{ qInfo: { qType: "FieldList" }, qFieldListDef: { qShowSystem: false } }], function(response){
           var handle = response.result.qReturn.qHandle;
           that.exchange.ask(handle, "GetLayout", [], function(response){
-            that.fieldsFetched.deliver(response.result.qLayout);
+            responseData.fields = response.result.qLayout.qFieldList.qItems;
+            responseData.setCount++;
+            if(responseData.setCount===CALL_COUNT){
+              that.sortFieldsByTag(responseData);
+            }
           });
         });
+        //get app dimensions
+        that.exchange.ask(that.appHandle, "CreateSessionObject", [{ qInfo: { qType: "DimensionList" }, qDimensionListDef: { qType: "dimension", qData: {title: "/qMetaDef/title", tags: "/qMetaDef/tags", grouping: "/qDim/qGrouping", info: "/qDimInfos"} } }], function(response){
+          var handle = response.result.qReturn.qHandle;
+          that.exchange.ask(handle, "GetLayout", [], function(response){
+            responseData.dimensions = response.result.qLayout.qDimensionList.qItems;
+            responseData.setCount++;
+            if(responseData.setCount===CALL_COUNT){
+              that.sortFieldsByTag(responseData);
+            }
+          });
+        });
+        //get app measures
+        //disabled for now - why? - because library measures are pre defined and most of our logic is designed to build up an expression with set analysis
+        // that.exchange.ask(that.appHandle, "CreateSessionObject", [{ qInfo: { qType: "MeasureList" }, qMeasureListDef: { qType: "measure", qData: {title: "/qMetaDef/title", tags: "/qMetaDef/tags"} } }], function(response){
+        //   var handle = response.result.qReturn.qHandle;
+        //   that.exchange.ask(handle, "GetLayout", [], function(response){
+        //     responseData.measures = response.result.qLayout.qMeasureList.qItems;
+        //     responseData.setCount++;
+        //     if(responseData.setCount===3){
+        //       that.sortFieldsByTag(responseData);
+        //     }
+        //   });
+        // });
+        responseData.measures = [];
+      }
+    },
+    sortFieldsByTag:{
+      value: function(fieldData){
+        //organise the fields
+        for (var i=0;i<fieldData.fields.length;i++){
+          var fieldName = fieldData.fields[i].qName.toLowerCase().replace(/ /gi, "_");
+          this.appFields[fieldName] = fieldData.fields[i];
+          for (var t=0;t<fieldData.fields[i].qTags.length;t++){
+            if(!this.appFieldsByTag[fieldData.fields[i].qTags[t]]){
+              this.appFieldsByTag[fieldData.fields[i].qTags[t]] = {};
+            }
+            this.appFieldsByTag[fieldData.fields[i].qTags[t]][fieldName] = {
+              fieldName: fieldData.fields[i].qName
+            };
+          }
+        }
+        //organise the dimensions
+        for (var i=0;i<fieldData.dimensions.length;i++){
+          var fieldName = fieldData.dimensions[i].qData.title.toLowerCase().replace(/ /gi, "_");
+          this.appFields[fieldName] = fieldData.dimensions[i];
+          if(!this.appFieldsByTag.$dimension){
+            this.appFieldsByTag.$dimension = {};
+          }
+          this.appFieldsByTag.$dimension[fieldName] = {
+            fieldName: fieldData.dimensions[i].qData.title
+          };
+          for (var t=0;t<fieldData.dimensions[i].qMeta.tags.length;t++){
+            var tag = fieldData.dimensions[i].qMeta.tags[t];
+            if(tag.indexOf("$")==-1){
+              tag = "$"+tag;
+            }
+            if(!this.appFieldsByTag[tag]){
+              this.appFieldsByTag[tag] = {};
+            }
+            this.appFieldsByTag[tag][fieldName] = {
+              fieldName: fieldData.dimensions[i].qData.title
+            };
+          }
+        }
+        //organise the measures
+        for (var i=0;i<fieldData.measures.length;i++){
+          var fieldName = fieldData.measures[i].qData.title.toLowerCase().replace(/ /gi, "_");
+          this.appFields[fieldName] = fieldData.measures[i];
+          if(!this.appFieldsByTag.$measure){
+            this.appFieldsByTag.$measure = {};
+          }
+          this.appFieldsByTag.$measure[fieldName] = {
+            fieldName: fieldData.measures[i].qData.title
+          };
+          for (var t=0;t<fieldData.measures[i].qMeta.tags.length;t++){
+            var tag = fieldData.measures[i].qMeta.tags[t];
+            if(tag.indexOf("$")==-1){
+              tag = "$"+tag;
+            }
+            if(!this.appFieldsByTag[tag]){
+              this.appFieldsByTag[tag] = {};
+            }
+            this.appFieldsByTag[tag][fieldName] = {
+              fieldName: fieldData.measures[i].qData.title
+            };
+          }
+        }
+        console.log(fieldData);
+        this.fieldsFetched.deliver();
       }
     },
     searchResults:{
