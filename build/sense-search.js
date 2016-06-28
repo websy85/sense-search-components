@@ -2220,7 +2220,7 @@ var SenseSearch = (function(){
         that.pendingChart = this.exchange.seqId+1;
         if(this.exchange.connectionType=="CapabilityAPI"){
           var fieldArray = [], defOptions = def;
-          def.wsId = that.pendingChart;
+          defOptions.wsId = that.pendingChart;
           if(def.qInfo.qType=="kpi"){
             defOptions.qHyperCubeDef.qMeasures[0].qDef.measureAxis = {
               min: 0,
