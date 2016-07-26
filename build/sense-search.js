@@ -312,7 +312,10 @@ var SenseSearchInput = (function(){
     },
     onClear: {
       value: function(){
-        document.getElementById(this.id+'_input').value = "";
+        var inputEl = document.getElementById(this.id+'_input');
+        if(inputEl){
+          inputEl.value = "";
+        }
         this.searchText = "";
         this.nlpTerms = [];
         this.nlpResolvedTerms = {};
@@ -765,7 +768,9 @@ var SenseSearchInput = (function(){
           console.log(event);
           var term = event.target.attributes['data-term'].value;
           var ambiguityElement = document.getElementById('ambiguous_'+term.replace(/ /gi, "_"));
-          ambiguityElement.style.display = 'initial';
+          if(ambiguityElement){
+            ambiguityElement.style.display = 'initial';
+          }
         }
         else if (event.target.classList.contains('ambiguous_resolve')) {
           var term = event.target.attributes['data-term'].value;
@@ -850,7 +855,13 @@ var SenseSearchInput = (function(){
         if(event.keyCode == Key.Control){
           this.isCutCopyPaste = false;
         }
-        this.searchText = document.getElementById(this.id+'_input').value;
+        var inputEl = document.getElementById(this.id+'_input');
+        if(inputEl){
+          this.searchText = inputEl.value;
+        }
+        else{
+          return;
+        }
         this.cursorPosition = event.target.selectionStart;
         if(this.mode==="visualizations"){
           this.processTerms(this.searchText, !this.isPaste);
@@ -939,7 +950,10 @@ var SenseSearchInput = (function(){
           //render the suggested completion
           this.drawGhost();
           //render the suggestions
-          document.getElementById(this.id+"_suggestions").style.display = "block";
+          var suggestEl = document.getElementById(this.id+"_suggestions");
+          if(suggestEl){
+            suggestEl.style.display = "block";
+          }
           this.drawSuggestions();
         }
         else{
@@ -957,7 +971,10 @@ var SenseSearchInput = (function(){
         this.ghostQuery = "";
         this.ghostDisplay = "";
         this.removeGhost();
-        document.getElementById(this.id+"_suggestions").style.display = "none";
+        var suggestEl = document.getElementById(this.id+"_suggestions");
+        if(suggestEl){
+          suggestEl.style.display = "none";
+        }
       }
     },
     showAssociations: {
@@ -989,13 +1006,22 @@ var SenseSearchInput = (function(){
             html += "</li>";
           }
         }
-        document.getElementById(this.id+"_associationsList").innerHTML = html;
-        document.getElementById(this.id+"_associations").style.display = "block";
+        var assListEl = document.getElementById(this.id+"_associationsList");
+        if(assListEl){
+          assListEl.innerHTML = html;
+        }
+        var assEl = document.getElementById(this.id+"_associations");
+        if(assEl){
+          assEl.style.display = "block";
+        }
       }
     },
     hideAssociations: {
       value: function(){
-        document.getElementById(this.id+"_associations").style.display = "none";
+        var assEl = document.getElementById(this.id+"_associations");
+        if(assEl){
+          assEl.style.display = "none";
+        }
       }
     },
     buildLozenges: {
@@ -1030,14 +1056,26 @@ var SenseSearchInput = (function(){
           ambiguityHTML += "</ul>";
           ambiguityHTML += "</div>";
         }
-        document.getElementById(this.id+"_lozenges").innerHTML = lozengeHTML;
-        document.getElementById(this.id+"_ambiguities").innerHTML = ambiguityHTML;
+        var lozengeEl = document.getElementById(this.id+"_lozenges");
+        if(lozengeEl){
+          lozengeEl.innerHTML = lozengeHTML;
+        }
+        var ambiguityEl = document.getElementById(this.id+"_ambiguities");
+        if(ambiguityEl){
+          ambiguityEl.innerHTML = ambiguityHTML;
+        }
       }
     },
     clearLozenges: {
       value: function(){
-        document.getElementById(this.id+"_lozenges").innerHTML = "";
-        document.getElementById(this.id+"_ambiguities").innerHTML = "";
+        var lozengeEl = document.getElementById(this.id+"_lozenges");
+        if(lozengeEl){
+          lozengeEl.innerHTML = "";
+        }
+        var ambiguityEl = document.getElementById(this.id+"_ambiguities");
+        if(ambiguityEl){
+          ambiguityEl.innerHTML = "";
+        }
       }
     },
     startSuggestionTimeout:{
@@ -1082,7 +1120,10 @@ var SenseSearchInput = (function(){
         this.searchText = this.ghostQuery;
         this.suggestions = [];
         this.hideSuggestions();
-        document.getElementById(this.id+'_input').value = this.searchText;
+        var inputEl = document.getElementById(this.id+'_input');
+        if(inputEl){
+          inputEl.value = this.searchText;
+        }
         this.search();
       }
     },
@@ -1324,12 +1365,18 @@ var SenseSearchInput = (function(){
         this.ghostPart = getGhostString(this.searchText, this.suggestions[this.activeSuggestion].qValue);
         this.ghostQuery = this.searchText + this.ghostPart;
         var ghostDisplay = "<span style='color: transparent;'>"+this.searchText+"</span>"+this.ghostPart;
-        document.getElementById(this.id+"_ghost").innerHTML = ghostDisplay;
+        var ghostEl = document.getElementById(this.id+"_ghost");
+        if(ghostEl){
+          ghostEl.innerHTML = ghostDisplay;
+        }
       }
     },
     removeGhost:{
       value: function(){
-        document.getElementById(this.id+"_ghost").innerHTML = "";
+        var ghostEl = document.getElementById(this.id+"_ghost");
+        if(ghostEl){
+          ghostEl.innerHTML = "";
+        }
       }
     },
     drawSuggestions:{
@@ -1340,7 +1387,10 @@ var SenseSearchInput = (function(){
           suggestionsHtml += this.suggestions[i].qValue;
           suggestionsHtml += "</li>";
         }
-        document.getElementById(this.id+"_suggestionList").innerHTML = suggestionsHtml;
+        var suggListEl = document.getElementById(this.id+"_suggestionList");
+        if(suggListEl){
+          suggListEl.innerHTML = suggestionsHtml;
+        }
         this.highlightActiveSuggestion();
       }
     },
@@ -1348,11 +1398,16 @@ var SenseSearchInput = (function(){
       value: function(){
         //remove all previous highlights
         var parent = document.getElementById(this.id+"_suggestionList");
-        for (var c=0; c < parent.childElementCount;c++){
-          parent.childNodes[c].classList.remove("active");
+        if(parent){
+          for (var c=0; c < parent.childElementCount;c++){
+            parent.childNodes[c].classList.remove("active");
+          }
         }
         //add the 'active' class to the current suggestion
-        document.getElementById(this.id+"_suggestion_"+this.activeSuggestion).classList.add("active");
+        var activeSuggEl = document.getElementById(this.id+"_suggestion_"+this.activeSuggestion);
+        if(activeSuggEl){
+            activeSuggEl.classList.add("active");
+        }
       }
     },
     activate:{
@@ -1364,8 +1419,10 @@ var SenseSearchInput = (function(){
     activateInput:{
       value: function(){
         var el = document.getElementById(this.id+"_input");
-        el.attributes["placeholder"].value = "Enter up to 5 search terms";
-        el.disabled = false;
+        if(el){
+          el.attributes["placeholder"].value = "Enter up to 5 search terms";
+          el.disabled = false;
+        }
       }
     }
   });
