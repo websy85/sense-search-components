@@ -1,5 +1,4 @@
 var SenseSearchInput = (function(){
-  var MAX_SEARCH_TERMS = 20;
   var inputTimeout;
   var ignoreKeys = [
     16,
@@ -92,6 +91,10 @@ var SenseSearchInput = (function(){
     id:{
       writable: true,
       value: null
+    },
+    MAX_SEARCH_TERMS:{
+      writable: true,
+      value: 10
     },
     attach:{
       value: function(options){
@@ -829,7 +832,7 @@ var SenseSearchInput = (function(){
         }
         else if(event.keyCode == Key.SPACE){
           //we'll check here to make sure the latest term is at least 2 characters
-          if(this.searchText.split(" ").length==MAX_SEARCH_TERMS){
+          if(this.searchText.split(" ").length==this.MAX_SEARCH_TERMS){
             alert('Too many search terms');
             event.preventDefault();
             return false;
@@ -1420,7 +1423,7 @@ var SenseSearchInput = (function(){
       value: function(){
         var el = document.getElementById(this.id+"_input");
         if(el){
-          el.attributes["placeholder"].value = "Enter up to 5 search terms";
+          el.attributes["placeholder"].value = this.placeholder || "Enter up to "+this.MAX_SEARCH_TERMS+" search terms";
           el.disabled = false;
         }
       }
