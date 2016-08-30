@@ -465,7 +465,17 @@ var SenseSearchInput = (function(){
         }
         //now we need to fill in the blanks with the rest of the terms
         var wordGroups = processedText.split(";");
+        var wordGroupsCumulativeLengths = [];
+        console.log(wordGroups);
         for(var g=0;g<wordGroups.length;g++){
+          var cLength = 0;
+          if(g==0){
+            cLength = 0;
+          }
+          else{
+            cLength = (wordGroupsCumulativeLengths[g-1]+wordGroups[g-1].replace("||","").length);
+          }
+          wordGroupsCumulativeLengths.push(cLength);
           if(wordGroups[g].indexOf("||")==-1 && wordGroups[g].length>0){
             //we have unprocessed info
             var words = wordGroups[g].split(" ");
@@ -475,7 +485,7 @@ var SenseSearchInput = (function(){
                   name: words[w],
                   text: words[w],
                   parsedText: words[w],
-                  position: text.indexOf(words[w]),
+                  position: cLength,
                   length: words[w].length
                 });
               }
@@ -511,43 +521,6 @@ var SenseSearchInput = (function(){
           }
         // }
         console.log(this.nlpTerms);
-      }
-    },
-    processTermsX:{
-      value: function(text){
-        var terms = [];
-        var words = text.split(" ");
-        for (var w=0;w<words.length;w++){
-          if(words[w]!==""){
-            terms.push({text:words[w]})
-          }
-        }
-        this.createTermPosArray(terms);
-        this.setCurrentTerm(terms);
-        var currentTermIndex = this.getCurrentTermIndex();
-        if(this.currentTerm){
-          console.log(this.currentTerm);
-          var term = this.tagTerm(this.currentTerm);
-          this.nlpTerms.splice(currentTermIndex, 1, term);
-          //check the previous and next term in case the definition has changed
-          if(this.nlpTerms[currentTermIndex-1] && terms[currentTermIndex-1]){
-            if(this.nlpTerms[currentTermIndex-1].text != terms[currentTermIndex-1].text){
-              var prevTerm = this.tagTerm(terms[currentTermIndex-1]);
-              this.nlpTerms.splice(currentTermIndex-1, 1, prevTerm);
-            }
-          }
-          if(this.nlpTerms[currentTermIndex+1] && terms[currentTermIndex+1]){
-            if(this.nlpTerms[currentTermIndex+1].text != terms[currentTermIndex+1].text){
-              var nextTerm = this.tagTerm(terms[currentTermIndex+1]);
-              this.nlpTerms.splice(currentTermIndex+1, 1, nextTerm);
-            }
-          }
-          else if (this.nlpTerms[currentTermIndex+1]) {
-            //we have a term that's probably been deleted
-            this.nlpTerms.splice(currentTermIndex+1, 1);
-          }
-          console.log(this.nlpTerms);
-        }
       }
     },
     createTermPosArray: {
@@ -623,117 +596,7 @@ var SenseSearchInput = (function(){
 
         return term;
       }
-    },
-    tagTermX: {
-      value: function(term){
-        var termText = term.text.toLowerCase();
-        var currentTermIndex = this.getCurrentTermIndex();
-        term.senseTag = "";
-        term.queryTag = "";
-        if(this.nlpModel && this.nlpModel.fieldNounMap[termText]){
-          //this is a term that should be translated into a field
-          var mappedField = this.nlpModel.fieldNounMap[termText];
-          if(senseSearch.appFieldsByTag.$measure && senseSearch.appFieldsByTag.$measure.indexOf(mappedField)!==-1){
-            term.queryTag = "exp";
-            term.senseType = "measure";
-            term.senseInfo = {
-              field: senseSearch.appFields[mappedField]
-            };
-          }
-          else {
-            term.queryTag = "dim";
-            term.senseType = "dimension";
-            term.senseInfo = {
-              field: senseSearch.appFields[termText]
-            };
-            if(senseSearch.appFieldsByTag.$time && senseSearch.appFieldsByTag.$time.indexOf(term.text)!==-1){
-              term.senseInfo.type = "time";
-            }
-          }
-          if(this.nlpTerms[currentTermIndex-1] && this.nlpTerms[currentTermIndex-1].queryTag==="!"){
-            if (this.nlpTerms[currentTermIndex-2] && this.nlpTerms[currentTermIndex-2].queryTag==="sorting"){
-              term.queryTag = "sortfield";
-              term.senseType = "sortfield";
-            }
-          }
-          else if (this.nlpTerms[currentTermIndex-1] && this.nlpTerms[currentTermIndex-1].queryTag==="sorting"){
-            term.queryTag = "sortfield";
-            term.senseType = "sortfield";
-          }
-        }
-        else if (senseSearch.appFields[termText]) {
-          if(senseSearch.appFieldsByTag.$measure && senseSearch.appFieldsByTag.$measure.indexOf(term.text)!==-1){
-            term.queryTag = "exp";
-            term.senseType = "measure";
-            term.senseInfo = {
-              field: senseSearch.appFields[termText]
-            };
-          }
-          else {
-            term.queryTag = "dim";
-            term.senseType = "dimension";
-            term.senseInfo = {
-              field: senseSearch.appFields[termText]
-            };
-            if(senseSearch.appFieldsByTag.$time && senseSearch.appFieldsByTag.$time.indexOf(term.text)!==-1){
-              term.senseInfo.type = "time";
-            }
-          }
-          if(this.nlpTerms[currentTermIndex-1] && this.nlpTerms[currentTermIndex-1].queryTag==="!"){
-            if (this.nlpTerms[currentTermIndex-2] && this.nlpTerms[currentTermIndex-2].queryTag==="sorting"){
-              term.queryTag = "sort by";
-              term.senseType = "sortfield";
-            }
-          }
-          else if (this.nlpTerms[currentTermIndex-1] && this.nlpTerms[currentTermIndex-1].queryTag==="sorting"){
-            term.queryTag = "sort by";
-            term.senseType = "sortfield";
-          }
-        }
-        else if (this.nlpModel.functionMap[termText]) {
-          term.senseType = "function";
-          term.senseInfo = {
-            func: this.nlpModel.functionMap[termText]
-          };
-          term.queryTag = "function";
-        }
-        else if (this.nlpModel.sorting.indexOf(termText)!=-1) {
-          term.queryTag = "sorting";
-        }
-        else if (this.nlpModel.sortorder[termText]) {
-          term.queryTag = "sortorder";
-          if(this.nlpTerms[currentTermIndex-1] && this.nlpTerms[currentTermIndex-1].queryTag==="sort by"){
-            this.nlpTerms[currentTermIndex-1].senseInfo.order = this.nlpModel.sortorder[termText];
-          }
-          else {
-            term.senseType = "sortorder";
-            term.senseInfo = {order: this.nlpModel.sortorder[termText]};
-          }
-        }
-        else if (this.nlpModel.vizTypeMap[termText]) {
-          term.queryTag = "viz";
-          term.senseType = "viz";
-          term.senseInfo = {
-            viz: this.nlpModel.vizTypeMap[termText]
-          };
-        }
-        else if (this.nlpModel.comparatives[termText]) {
-          // term.queryTag = "comparative";
-          term.queryTag = "!";
-        }
-        else if (this.nlpModel.conditionals.indexOf(termText)!=-1) {
-          // term.queryTag = "condition";
-          term.queryTag = "!";
-        }
-        else if (this.nlpModel.misc.indexOf(termText)!=-1) {
-          term.queryTag = "!";
-        }
-        else{
-          // do nothing
-        }
-        return term;
-      }
-    },
+    },  
     clear:{
       value: function(){
         senseSearch.clear();
