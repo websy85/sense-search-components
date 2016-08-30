@@ -242,7 +242,8 @@ var SenseSearchInput = (function(){
         misc:[
           "by",
           "as",
-          "me"
+          "me",
+          "not"
         ],
         joining:[
           "and"
@@ -278,7 +279,9 @@ var SenseSearchInput = (function(){
           "barchart": "barchart",
           "linechart": "linechart",
           "piechart": "piechart",
-          "table": "table"
+          "table": "table",
+          "treemap": "treemap",
+          "scatter": "scatterplot"
         }
       }
     },
@@ -343,6 +346,7 @@ var SenseSearchInput = (function(){
           console.log('ambiguities');
           console.log(this.associations);
           var terms = this.getTermByText(this.associations.qSearchTerms[this.associations.qSearchTerms.length-1]);
+          var termIndexes = this.getTermIndexByText(this.associations.qSearchTerms[this.associations.qSearchTerms.length-1]);
           //build the lozenges that separate the terms
           for(var t=0;t<terms.length;t++){
             if(this.associations.qFieldNames.length==0){
@@ -354,8 +358,13 @@ var SenseSearchInput = (function(){
               terms[t].senseTag = this.associations.qFieldNames[0];
               terms[t].senseType = "value";
               terms[t].senseInfo = {
-                field: senseSearch.appFields[this.associations.qFieldNames[0]]
+                field: senseSearch.appFields[this.associations.qFieldNames[0]],
+                fieldSelection: "="
               };
+              var cti = termIndexes[t];
+              if(this.nlpTerms[cti-1] && this.nlpTerms[cti-1].text && this.nlpTerms[cti-1].text.toLowerCase()==="not"){
+                terms[t].senseInfo.fieldSelection = "-="
+              }
               this.buildLozenges();
               this.nlpViz();
             }
@@ -401,6 +410,17 @@ var SenseSearchInput = (function(){
         return terms;
       }
     },
+    getTermIndexByText: {
+      value: function(text){
+        var terms = []; //we could have multiple terms with the same text so we return an Array
+        for (var t=0;t<this.nlpTerms.length;t++){
+          if(this.nlpTerms[t].text == text && (!this.nlpTerms[t].senseType || this.nlpTerms[t].senseType=="")){
+            terms.push(t);
+          }
+        }
+        return terms;
+      }
+    },
     getCurrentTermIndex: {
       value: function(){
         return this.nlpTermsPositions[this.cursorPosition-1];
@@ -437,7 +457,7 @@ var SenseSearchInput = (function(){
           var parsedName = parseText(normalizedName);
           var fieldPos = text.indexOf(parsedName);
           var aliasFieldPos = -1;
-          if(this.nlpModel.fieldNounMap[parsedName]){
+          if(fieldPos == -1 && this.nlpModel.fieldNounMap[parsedName]){
             aliasFieldPos = text.indexOf(this.nlpModel.fieldNounMap[parsedName].toLowerCase());
             fieldName = this.nlpModel.fieldNounMap[parsedName];
             parsedName = this.nlpModel.fieldNounMap[parsedName].toLowerCase();
@@ -596,7 +616,7 @@ var SenseSearchInput = (function(){
 
         return term;
       }
-    },  
+    },
     clear:{
       value: function(){
         senseSearch.clear();
@@ -644,8 +664,12 @@ var SenseSearchInput = (function(){
           this.nlpTerms[term].senseType = "value";
           this.nlpTerms[term].queryTag = field;
           this.nlpTerms[term].senseInfo = {
-            field: senseSearch.appFields[normalizeText(field)]
+            field: senseSearch.appFields[normalizeText(field)],
+            fieldSelection: "="
           };
+          if(this.nlpTerms[term-1] && this.nlpTerms[term-1].text && this.nlpTerms[term-1].text.toLowerCase()==="not"){
+            this.nlpTerms[term].senseInfo.fieldSelection = "-="
+          }
           this.nlpResolvedTerms[this.nlpTerms[term].name] = this.nlpTerms[term];
           this.buildLozenges();
           this.nlpViz();
@@ -1090,7 +1114,8 @@ var SenseSearchInput = (function(){
               }
               var set = "";
               set += "[" + fieldName + "]";
-              set += "={'";
+              set += this.nlpTerms[t].senseInfo.fieldSelection;
+              set += "{'";
               set += this.nlpTerms[t].text;
               set += "*'}";
               set += "";
