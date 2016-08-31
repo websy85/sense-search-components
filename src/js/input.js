@@ -243,7 +243,8 @@ var SenseSearchInput = (function(){
           "by",
           "as",
           "me",
-          "not"
+          "not",
+          "in"
         ],
         joining:[
           "and"
@@ -497,18 +498,25 @@ var SenseSearchInput = (function(){
           }
           wordGroupsCumulativeLengths.push(cLength);
           if(wordGroups[g].indexOf("||")==-1 && wordGroups[g].length>0){
-            //we have unprocessed info
             var words = wordGroups[g].split(" ");
+            var sentenceCumulativeLength = 0;
             for (var w=0;w<words.length;w++){
+              if(w==0&&wordGroups[g].split()[0]==" "){
+                sentenceCumulativeLength = 1;
+              }
+              else{
+                sentenceCumulativeLength++;
+              }
               if(words[w].length>0){
                 terms.push({
                   name: words[w],
                   text: words[w],
                   parsedText: words[w],
-                  position: cLength,
+                  position: cLength+sentenceCumulativeLength,
                   length: words[w].length
                 });
               }
+              sentenceCumulativeLength += words[w].length;
             }
           }
         }
