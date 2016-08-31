@@ -358,7 +358,7 @@ var SenseSearchInput = (function(){
               terms[t].senseTag = this.associations.qFieldNames[0];
               terms[t].senseType = "value";
               terms[t].senseInfo = {
-                field: senseSearch.appFields[this.associations.qFieldNames[0]],
+                field: senseSearch.appFields[this.associations.qFieldNames[0].toLowerCase()],
                 fieldSelection: "="
               };
               var cti = termIndexes[t];
