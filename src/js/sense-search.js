@@ -1,11 +1,11 @@
 include "./input.js"
 include "./results.js"
+include "./subscription.js"
 
 var SenseSearch = (function(){
 
   include "./connection.js"
   include "./socket-session.js"
-  include "./subscription.js"
   include "./exchange.js"
 
   function SenseSearch(){

@@ -81,6 +81,7 @@ var SenseSearchInput = (function(){
     this.searchTimeout = this.searchTimeout || 300;
     this.suggestTimeout = this.suggestTimeout || 100;
     this.chartTimeout = this.chartTimeout || 300;
+    this.ready = new Subscription();
     senseSearch.ready.subscribe(this.activate.bind(this));
     senseSearch.fieldsFetched.subscribe(this.fieldsFetched.bind(this));
     senseSearch.cleared.subscribe(this.onClear.bind(this));
@@ -95,6 +96,10 @@ var SenseSearchInput = (function(){
     MAX_SEARCH_TERMS:{
       writable: true,
       value: 10
+    },
+    ready:{
+      writable: true,
+      value: null
     },
     attach:{
       value: function(options){
@@ -771,72 +776,97 @@ var SenseSearchInput = (function(){
         }
         if(reservedKeys.indexOf(event.keyCode) == -1){
           if(this.mode==="visualizations"){
-            if(this.searchText && this.searchText.trim().length>1){
-              var that = this;
-              if(this.searchTimeoutFn){
-                clearTimeout(this.searchTimeoutFn);
-              }
-              this.searchTimeoutFn = setTimeout(function(){
-                for(var t=0;t<that.nlpTerms.length;t++){
-                  if(!that.nlpTerms[t].senseType && !that.nlpTerms[t].queryTag){
-                    that.searchForSingleTerm(that.nlpTerms[t].text);
-                  }
-                }
-              }, this.searchTimeout);
-
-                ////we're not suggesting for now for UX based reasons
-                // if(this.searchText.length > 1 && this.cursorPosition==this.searchText.length){
-                //   if(this.suggestTimeoutFn){
-                //     clearTimeout(this.suggestTimeoutFn);
-                //   }
-                //   this.suggestTimeoutFn = setTimeout(function(){
-                //     that.suggest();
-                //   }, this.suggestTimeout);
-                // }
-              if(this.chartTimeoutFn){
-                clearTimeout(this.chartTimeoutFn);
-              }
-              this.chartTimeoutFn = setTimeout(function(){
-                that.nlpViz();
-              }, this.chartTimeout);
-            }
-            if(!this.searchText || this.searchText.length == 0){
-              this.clear();
-            }
+            this.preVizSearch();
           }
           else{
-            if(this.searchText && this.searchText.length > 0){
-              //we'll check here to make sure the latest term is at least 2 characters before searching
-              if(this.searchText.split(" ").pop().length>1){
-                var that = this;
-                if(this.searchTimeoutFn){
-                  clearTimeout(this.searchTimeoutFn);
-                }
-                this.searchTimeoutFn = setTimeout(function(){
-                  that.search();
-                }, this.searchTimeout);
-
-                if(this.searchText.length > 1 && this.cursorPosition==this.searchText.length){
-                  if(this.suggestTimeoutFn){
-                    clearTimeout(this.suggestTimeoutFn);
-                  }
-                  this.suggestTimeoutFn = setTimeout(function(){
-                    that.suggest();
-                  }, this.suggestTimeout);
-                }
-              }
-            }
-            else{
-              //clear the search
-              this.clear();
-            }
+            this.preSearch();
           }
         }
       }
     },
-    onPaste:{
-      value: function(event){
-        console.log('value pasted');
+    preSearch:{
+      value: function(){
+        if(this.searchText && this.searchText.length > 0){
+          //we'll check here to make sure the latest term is at least 2 characters before searching
+          if(this.searchText.split(" ").pop().length>1){
+            var that = this;
+            if(this.searchTimeoutFn){
+              clearTimeout(this.searchTimeoutFn);
+            }
+            this.searchTimeoutFn = setTimeout(function(){
+              that.search();
+            }, this.searchTimeout);
+
+            if(this.searchText.length > 1 && this.cursorPosition==this.searchText.length){
+              if(this.suggestTimeoutFn){
+                clearTimeout(this.suggestTimeoutFn);
+              }
+              this.suggestTimeoutFn = setTimeout(function(){
+                that.suggest();
+              }, this.suggestTimeout);
+            }
+          }
+        }
+        else{
+          //clear the search
+          this.clear();
+        }
+      }
+    },
+    preVizSearch:{
+      value: function(){
+        if(this.searchText && this.searchText.trim().length>1){
+          var that = this;
+          if(this.searchTimeoutFn){
+            clearTimeout(this.searchTimeoutFn);
+          }
+          this.searchTimeoutFn = setTimeout(function(){
+            for(var t=0;t<that.nlpTerms.length;t++){
+              if(!that.nlpTerms[t].senseType && !that.nlpTerms[t].queryTag){
+                that.searchForSingleTerm(that.nlpTerms[t].text);
+              }
+            }
+          }, this.searchTimeout);
+
+            ////we're not suggesting for now for UX based reasons
+            // if(this.searchText.length > 1 && this.cursorPosition==this.searchText.length){
+            //   if(this.suggestTimeoutFn){
+            //     clearTimeout(this.suggestTimeoutFn);
+            //   }
+            //   this.suggestTimeoutFn = setTimeout(function(){
+            //     that.suggest();
+            //   }, this.suggestTimeout);
+            // }
+          if(this.chartTimeoutFn){
+            clearTimeout(this.chartTimeoutFn);
+          }
+          this.chartTimeoutFn = setTimeout(function(){
+            that.nlpViz();
+          }, this.chartTimeout);
+        }
+        if(!this.searchText || this.searchText.length == 0){
+          this.clear();
+        }
+      }
+    },
+    setSearchText:{
+      value: function(text){
+        this.searchText = text;
+        this.isPaste = true;
+        this.cursorPosition = text.length;
+        var inputEl = document.getElementById(this.id+'_input');
+        if(inputEl){
+          inputEl.value = text;
+        }
+        if(this.mode==="visualizations"){
+          this.processTerms(this.searchText, !this.isPaste);
+          this.buildLozenges();
+          this.preVizSearch();
+        }
+        else{
+          this.preSearch();
+        }
+        this.isPaste = false;
       }
     },
     showSuggestions:{
@@ -1321,6 +1351,8 @@ var SenseSearchInput = (function(){
         if(el){
           el.attributes["placeholder"].value = this.placeholder || "Enter up to "+this.MAX_SEARCH_TERMS+" search terms";
           el.disabled = false;
+          console.log('input activated');
+          this.ready.deliver();
         }
       }
     }
@@ -1749,6 +1781,24 @@ var SenseSearchResult = (function(){
   return SenseSearchResult;
 }());
 
+function Subscription(){
+    this.callbackList = [];
+}
+Subscription.prototype = Object.create(Object.prototype, {
+    subscribe:{
+        value: function(fn){
+            this.callbackList.push(fn);
+        }
+    },
+    deliver: {
+        value: function(args){
+            for (var i=0; i<this.callbackList.length;i++){
+                this.callbackList[i].call(null, args);
+            }
+        }
+    }
+});
+
 
 var SenseSearch = (function(){
 
@@ -1862,24 +1912,6 @@ var SenseSearch = (function(){
       };
 
   };
-
-  function Subscription(){
-      this.callbackList = [];
-  }
-  Subscription.prototype = Object.create(Object.prototype, {
-      subscribe:{
-          value: function(fn){
-              this.callbackList.push(fn);
-          }
-      },
-      deliver: {
-          value: function(args){
-              for (var i=0; i<this.callbackList.length;i++){
-                  this.callbackList[i].call(null, args);
-              }
-          }
-      }
-  });
 
   var Exchange = (function(){
     function Exchange(options, connectionType, callbackFn){
