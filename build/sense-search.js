@@ -648,16 +648,20 @@ var SenseSearchInput = (function(){
           this.drawGhost(); //this gets the text ready for using as the new value
           this.acceptSuggestion();
         }
-        else if (event.target.classList.contains('sense-search-association-item') || event.target.parentNode.classList.contains('sense-search-association-item')) {
+        else if (event.target.classList.contains('sense-search-association-item') || event.target.parentNode.classList.contains('sense-search-association-item')|| event.target.parentNode.parentNode.classList.contains('sense-search-association-item')) {
           //an association was clicked
           var assocationIndex;
           if(event.target.classList.contains('sense-search-association-item')){
             //the li element was clicked
             assocationIndex = parseInt(event.target.attributes['data-index'].value);
           }
-          else{
+          else if(event.target.parentNode.classList.contains('sense-search-association-item')){
             //a child was clicked
             assocationIndex = parseInt(event.target.parentNode.attributes['data-index'].value);
+          }
+          else{
+            //a child of a child was clicked (messy, needs reqorking to be more dynamic)
+            assocationIndex = parseInt(event.target.parentNode.parentNode.attributes['data-index'].value);
           }
           senseSearch.selectAssociations(this.searchFields || [],  assocationIndex);
           this.hideAssociations();
@@ -1013,7 +1017,9 @@ var SenseSearchInput = (function(){
         }
         this.suggestingTimeoutFn = setTimeout(function(){
           //close the suggestions after inactivity for [suggestingTimeout] milliseconds
-          this.hideSuggestions.call(this);
+          if(this.mode!=="associations"){
+            this.hideSuggestions.call(this);
+          }
         }.bind(this), this.suggestingTimeout);
       }
     },

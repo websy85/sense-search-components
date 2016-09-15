@@ -113,7 +113,7 @@
   padding: 0;
 }
 .sense-search-input-container .sense-search-association-container ul li {
-  cursor: pointer;
+  cursor: pointer!important;
   padding: 0 15px;
   margin-bottom: 2px;
   font-size: 12px;
@@ -125,6 +125,7 @@
 }
 .sense-search-input-container .sense-search-association-container ul li h1 {
   font-size: 12px;
+  margin-top: 5px;
 }
 .sense-search-input-container .sense-search-association-container ul li div {
   display: inline-block;
