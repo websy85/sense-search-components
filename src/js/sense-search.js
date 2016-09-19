@@ -180,6 +180,7 @@ var SenseSearch = (function(){
     },
     createViz: {
       value: function(def){
+        this.searchStarted.deliver();
         var that = this;
         that.pendingChart = this.exchange.seqId+1;
         if(this.exchange.connectionType=="CapabilityAPI"){
