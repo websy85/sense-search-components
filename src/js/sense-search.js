@@ -225,7 +225,7 @@ var SenseSearch = (function(){
       }
     },
     getAppFields:{
-      value: function(){
+      value: function(cardinalityLimit){
         var that = this;
         var CALL_COUNT = 2;
         var responseData = {
@@ -241,7 +241,7 @@ var SenseSearch = (function(){
             responseData.fields = response.result.qLayout.qFieldList.qItems;
             responseData.setCount++;
             if(responseData.setCount===CALL_COUNT){
-              that.sortFieldsByTag(responseData);
+              that.sortFieldsByTag(responseData, cardinalityLimit);
             }
           });
         });
@@ -252,7 +252,7 @@ var SenseSearch = (function(){
             responseData.dimensions = response.result.qLayout.qDimensionList.qItems;
             responseData.setCount++;
             if(responseData.setCount===CALL_COUNT){
-              that.sortFieldsByTag(responseData);
+              that.sortFieldsByTag(responseData, cardinalityLimit);
             }
           });
         });
@@ -272,7 +272,7 @@ var SenseSearch = (function(){
       }
     },
     sortFieldsByTag:{
-      value: function(fieldData){
+      value: function(fieldData, cardinalityLimit){
         //organise the fields
         for (var i=0;i<fieldData.fields.length;i++){
           var fieldName = fieldData.fields[i].qName.toLowerCase().replace(/ /gi, "_");
@@ -284,6 +284,12 @@ var SenseSearch = (function(){
             this.appFieldsByTag[fieldData.fields[i].qTags[t]][fieldName] = {
               fieldName: fieldData.fields[i].qName
             };
+            if(fieldData.fields[i].qCardinal > cardinalityLimit){
+              if(!this.appFieldsByTag.$possibleMeasure){
+                this.appFieldsByTag.$possibleMeasure = {}
+              }
+              this.appFieldsByTag.$possibleMeasure[fieldName] = {fieldName: fieldData.fields[i].qName};
+            }
           }
         }
         //organise the dimensions
@@ -296,6 +302,12 @@ var SenseSearch = (function(){
           this.appFieldsByTag.$dimension[fieldName] = {
             fieldName: fieldData.dimensions[i].qData.title
           };
+          if(fieldData.fields[i].qCardinal > cardinalityLimit){
+            if(!this.appFieldsByTag.$possibleMeasure){
+              this.appFieldsByTag.$possibleMeasure = {}
+            }
+            this.appFieldsByTag.$possibleMeasure[fieldName] = {fieldName: fieldData.fields[i].qName};
+          }
           for (var t=0;t<fieldData.dimensions[i].qMeta.tags.length;t++){
             var tag = fieldData.dimensions[i].qMeta.tags[t];
             if(tag.indexOf("$")==-1){
@@ -332,7 +344,7 @@ var SenseSearch = (function(){
             };
           }
         }
-        console.log(fieldData);
+        console.log(this.appFieldsByTag);
         this.fieldsFetched.deliver();
       }
     },

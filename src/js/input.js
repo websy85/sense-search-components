@@ -110,7 +110,7 @@ var SenseSearchInput = (function(){
         }
         if(this.mode=="visualizations"){
           //get the field list
-          senseSearch.getAppFields();
+          senseSearch.getAppFields(this.nlpModel.cardinalityLimit);
         }
         else{
           this.activateInput();
@@ -242,6 +242,10 @@ var SenseSearchInput = (function(){
           "min": "min",
           "max": "max"
         },
+        distinctMap: {
+          "distinct": "DISTINCT",
+          "unique": "DISTINCT"
+        },
         defaultFunction: "sum",
         currencySymbol: "£",
         misc:[
@@ -249,9 +253,7 @@ var SenseSearchInput = (function(){
           "as",
           "me",
           "not",
-          "in"
-        ],
-        joining:[
+          "in",
           "and"
         ],
         comparatives:{
@@ -288,7 +290,8 @@ var SenseSearchInput = (function(){
           "table": "table",
           "treemap": "treemap",
           "scatter": "scatterplot"
-        }
+        },
+        cardinalityLimit: 1000
       }
     },
     fieldsFetched: {
@@ -610,6 +613,9 @@ var SenseSearchInput = (function(){
             term.senseInfo = {
               viz: this.nlpModel.vizTypeMap[termText]
             };
+          }
+          else if (this.nlpModel.distinctMap[termText]) {
+            term.queryTag = "distinct";
           }
           else if (this.nlpModel.comparatives[termText]) {
             // term.queryTag = "comparative";
@@ -1094,12 +1100,54 @@ var SenseSearchInput = (function(){
             }]
           }
         };
-        var dimensions={},measures={},fields=[],aggregations={},sorting={},sets=[],time=[],func=null,ambiguousSort=null;
+        var dimensions={},measures={},fields=[],aggregations={},sorting={},sets={},setCount=0,time=[],func=null,ambiguousSort=null;
         var dimensionIndexMap={},measureIndexMap={};
-        var dimensionCount=-1,measureCount=-1;
+        var dimensionCount=0,measureCount=0;
         var columnWidths = [];
         var chartType;
-        //first organise the terms into their sense component parts
+        //first check to see if any of our dims should be treated as measures based on functions
+        for(var t=0;t<this.nlpTerms.length;t++){
+          if(this.nlpTerms[t].senseType == "exp"){
+            measureCount++;
+          }
+          if(this.nlpTerms[t].senseType == "dim"){
+            if(this.nlpTerms[t-1]){
+              if(this.nlpModel.distinctMap[this.nlpTerms[t-1].text]){
+                this.nlpTerms[t].senseType = "exp";
+                this.nlpTerms[t].senseInfo.countDistinct = true;
+                this.nlpTerms[t].senseInfo.func = "count";
+                measureCount++;
+              }
+              else if (this.nlpTerms[t-1].senseType=="function") {
+                this.nlpTerms[t].senseType = "exp";
+                this.nlpTerms[t].senseInfo.func = this.nlpTerms[t-1].senseInfo.func;
+                measureCount++;
+              }
+            }
+          }
+        }
+
+        if(measureCount==0){
+          //we need a measure for something to render
+          for(var t=0;t<this.nlpTerms.length;t++){
+            if(measureCount==0){
+              if(this.nlpTerms[t].senseType == "dim"){
+                if(senseSearch.appFieldsByTag.$possibleMeasure && senseSearch.appFieldsByTag.$possibleMeasure[this.nlpTerms[t].parsedText]){
+                  this.nlpTerms[t].senseType = "exp";
+                  measureCount++;
+                  if(senseSearch.appFieldsByTag.$numeric && senseSearch.appFieldsByTag.$numeric[this.nlpTerms[t].parsedText]){
+                    this.nlpTerms[t].senseInfo.func = this.nlpModel.defaultFunction;
+                  }
+                  else {
+                    this.nlpTerms[t].senseInfo.func = "count";
+                  }
+                }
+              }
+            }
+          }
+        }
+        dimensionCount=-1,measureCount=-1;
+        //then organise the terms into their sense component parts
         for(var t=0;t<this.nlpTerms.length;t++){
           switch (this.nlpTerms[t].senseType) {
             case "exp":
@@ -1116,7 +1164,13 @@ var SenseSearchInput = (function(){
               else {
                 //we have a field tagged with $measure
                 measureName = this.nlpTerms[t].senseInfo.field.qName.replace(/ /gi,"-");
-                measures[measureName] = this.nlpTerms[t].senseInfo.field;
+                measures[measureName] = { field: this.nlpTerms[t].senseInfo.field };
+                if(this.nlpTerms[t].senseInfo.countDistinct){
+                  measures[measureName].isCountDistinct = true;
+                }
+                if(this.nlpTerms[t].senseInfo.func){
+                  measures[measureName].func = this.nlpTerms[t].senseInfo.func;
+                }
               }
               measureCount++;
               measureIndexMap[measureName]=measureCount;
@@ -1146,24 +1200,32 @@ var SenseSearchInput = (function(){
             case "viz":
               chartType = this.nlpTerms[t].senseInfo.viz;
               break;
-            case "value": //currently only supports a single value
+            case "value":
               var fieldName, normalizedName;
               if(this.nlpTerms[t].senseInfo.field.qInfo){
-                // normalizedName = normalizeText(this.nlpTerms[t].senseInfo.field.qData.title);
+                normalizedName = normalizeText(this.nlpTerms[t].senseInfo.field.qData.title);
                 fieldName = this.nlpTerms[t].senseInfo.field.qData.title;
               }
               else {
-                // normalizedName = normalizeText(this.nlpTerms[t].senseInfo.field.qName);
+                normalizedName = normalizeText(this.nlpTerms[t].senseInfo.field.qName);
                 fieldName = this.nlpTerms[t].senseInfo.field.qName;
               }
+              if(!sets[normalizedName]){
+                sets[normalizedName] = {
+                  field: fieldName,
+                  selector: this.nlpTerms[t].senseInfo.fieldSelection,
+                  values: []
+                };
+              }
               var set = "";
-              set += "[" + fieldName + "]";
-              set += this.nlpTerms[t].senseInfo.fieldSelection;
-              set += "{'";
+              // set += "[" + fieldName + "]";
+              // set += this.nlpTerms[t].senseInfo.fieldSelection;
+              set += "'";
               set += this.nlpTerms[t].text;
-              set += "*'}";
-              set += "";
-              sets.push(set);
+              set += "*'";
+              // set += "";
+              sets[normalizedName].values.push(set);
+              setCount++;
               break;
             case "sortfield":
               var sortName = this.nlpTerms[t].senseInfo.field.qName.replace(/ /gi,"-");
@@ -1209,15 +1271,26 @@ var SenseSearchInput = (function(){
           }
           else{
             var measDef = "=num(";
-            measDef += func || this.nlpModel.defaultFunction;
-            measDef += "({$";
-            if(sets.length > 0){
+            measDef += measures[m].func || func || this.nlpModel.defaultFunction;
+            measDef += "(";
+            if(measures[m].isCountDistinct){
+              measDef+= "DISTINCT ";
+            }
+            measDef += "{$";
+            if(setCount > 0){
               measDef += "<";
-              measDef += sets.join(",");
+              for(var s in sets){
+                measDef += "[" + sets[s].field + "]";
+                measDef += sets[s].selector;
+                measDef += "{";
+                measDef += sets[s].values.join(",");
+                measDef += "}";
+              }
+              // measDef += sets.join(",");
               measDef += ">";
             }
             measDef += "}";
-            measDef += "[" + measures[m].qName + "]";
+            measDef += "[" + measures[m].field.qName + "]";
             measDef += "), '";
             if(senseSearch.appFieldsByTag.$currency && senseSearch.appFieldsByTag.$currency[m] && func!=="count"){
                 measDef += this.nlpModel.currencySymbol;
@@ -1226,16 +1299,16 @@ var SenseSearchInput = (function(){
             var mDef = {
               qDef: {
                 qDef: measDef,
-                label: measures[m].qName
+                label: measures[m].field.qName
               }
             };
-            fields.push(measures[m].qName);
+            fields.push(measures[m].field.qName);
             if(sorting[m]){
               var sortType = "qSortByNumeric";
               var sortOrder = sorting[m].order || 1;
               mDef.qSortBy = {};
               mDef.qSortBy[sortType] = sortOrder;
-              hDef.qHyperCubeDef.qInterColumnSortOrder = [fields.indexOf(measures[m].qName)];
+              hDef.qHyperCubeDef.qInterColumnSortOrder = [fields.indexOf(measures[m].field.qName)];
             }
           }
           hDef.qHyperCubeDef.qMeasures.push(mDef);
