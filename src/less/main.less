@@ -1,3 +1,15 @@
 @import "./colours.less";
 @import "./input.less";
 @import "./results.less";
+
+@-webkit-keyframes spin {
+  0% {-webkit-transform: rotate(0deg);}
+  50% {-webkit-transform: rotate(180deg);}
+  100% {-webkit-transform: rotate(360deg);}
+}
+
+@keyframes spin {
+  0% {transform: rotate(0deg);}
+  50% {transform: rotate(180deg);}
+  100% {transform: rotate(360deg);}
+}

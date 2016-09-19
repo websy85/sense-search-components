@@ -10,6 +10,7 @@ var SenseSearch = (function(){
 
   function SenseSearch(){
     this.ready = new Subscription();
+    this.searchStarted = new Subscription();
     this.searchResults = new Subscription();
     this.searchAssociations = new Subscription();
     this.fieldsFetched = new Subscription();
@@ -128,6 +129,7 @@ var SenseSearch = (function(){
     },
     search: {
       value: function(searchText, searchFields, mode, context){
+        this.searchStarted.deliver();
         var that = this;
         mode = mode || "simple";
         context = context || this.context || "LockedFieldsOnly"
@@ -347,6 +349,10 @@ var SenseSearch = (function(){
         console.log(this.appFieldsByTag);
         this.fieldsFetched.deliver();
       }
+    },
+    searchStarted:{
+      writable: true,
+      value: null
     },
     searchResults:{
       writable: true,

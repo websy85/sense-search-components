@@ -1485,13 +1485,14 @@ var SenseSearchInput = (function(){
 
 var SenseSearchResult = (function(){
 
-  var templateHtml = "<div id='{id}_results' class='sense-search-results'></div>";
+  var templateHtml = "<div id='{id}_results_loading' class='sense-search-results_loading on'><div class='sense-search-results_loading-spinner'>Loading...</div></div><div id='{id}_results' class='sense-search-results'></div>";
 
   function SenseSearchResult(id, options){
     var element = document.createElement("div");
     element.id = id;
     element.classList.add("sense-search-results-container");
     this.resultsElement = id + "_results";
+    this.loadingElement = id + "_results_loading";
     var html = templateHtml.replace(/{id}/gim, id);
     element.innerHTML = html;
     options = options || {};
@@ -1553,6 +1554,7 @@ var SenseSearchResult = (function(){
             });
           }
           if(!this.attached){
+            senseSearch.searchStarted.subscribe(this.onSearchStarted.bind(this));
             senseSearch.searchResults.subscribe(this.onSearchResults.bind(this));
             senseSearch.noResults.subscribe(this.onNoResults.bind(this));
             senseSearch.chartResults.subscribe(this.onChartResults.bind(this));
@@ -1561,6 +1563,7 @@ var SenseSearchResult = (function(){
           }
           senseSearch.results[this.id] = this;
         }
+        this.hideLoading();
       }
     },
     fields:{
@@ -1616,8 +1619,30 @@ var SenseSearchResult = (function(){
       writable: true,
       value: null
     },
+    showLoading:{
+      value: function(){
+        var loadingElem = document.getElementById(this.loadingElement);
+        if(loadingElem){
+          loadingElem.classList.add('on');
+        }
+      }
+    },
+    hideLoading:{
+      value: function(){
+        var loadingElem = document.getElementById(this.loadingElement);
+        if(loadingElem){
+          loadingElem.classList.remove('on');
+        }
+      }
+    },
+    onSearchStarted:{
+      value: function(){
+        this.showLoading();
+      }
+    },
     onSearchResults:{
       value: function(results){
+        this.hideLoading();
         this.data = []; //after each new search we clear out the previous results
         this.pageTop = 0;
         this.getHyperCubeData();
@@ -1627,6 +1652,7 @@ var SenseSearchResult = (function(){
       value: function(genericObject){
         console.log("Chart created");
         console.log(genericObject);
+        this.hideLoading();
         var chartElem = document.createElement('div');
         chartElem.classList.add('chart-result');
         var parentElem = document.getElementById(this.resultsElement);
@@ -1641,11 +1667,13 @@ var SenseSearchResult = (function(){
     },
     onNoResults: {
       value:  function(){
+        this.hideLoading();
         this.renderItems([]);
       }
     },
     onClear:{
       value: function(){
+        this.hideLoading();
         document.getElementById(this.id+"_results").innerHTML = "";
       }
     },
@@ -2115,6 +2143,7 @@ var SenseSearch = (function(){
 
   function SenseSearch(){
     this.ready = new Subscription();
+    this.searchStarted = new Subscription();
     this.searchResults = new Subscription();
     this.searchAssociations = new Subscription();
     this.fieldsFetched = new Subscription();
@@ -2233,6 +2262,7 @@ var SenseSearch = (function(){
     },
     search: {
       value: function(searchText, searchFields, mode, context){
+        this.searchStarted.deliver();
         var that = this;
         mode = mode || "simple";
         context = context || this.context || "LockedFieldsOnly"
@@ -2452,6 +2482,10 @@ var SenseSearch = (function(){
         console.log(this.appFieldsByTag);
         this.fieldsFetched.deliver();
       }
+    },
+    searchStarted:{
+      writable: true,
+      value: null
     },
     searchResults:{
       writable: true,
