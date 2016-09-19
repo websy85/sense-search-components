@@ -257,6 +257,7 @@
   width: 100%;
   display: none;
   height: 100%;
+  z-index: 10;
 }
 .sense-search-results-container .sense-search-results_loading.on {
   display: block;
