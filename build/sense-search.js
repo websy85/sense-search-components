@@ -110,7 +110,7 @@ var SenseSearchInput = (function(){
         }
         if(this.mode=="visualizations"){
           //get the field list
-          senseSearch.getAppFields();
+          senseSearch.getAppFields(this.nlpModel.cardinalityLimit);
         }
         else{
           this.activateInput();
@@ -242,6 +242,10 @@ var SenseSearchInput = (function(){
           "min": "min",
           "max": "max"
         },
+        distinctMap: {
+          "distinct": "DISTINCT",
+          "unique": "DISTINCT"
+        },
         defaultFunction: "sum",
         currencySymbol: "£",
         misc:[
@@ -249,9 +253,7 @@ var SenseSearchInput = (function(){
           "as",
           "me",
           "not",
-          "in"
-        ],
-        joining:[
+          "in",
           "and"
         ],
         comparatives:{
@@ -288,7 +290,8 @@ var SenseSearchInput = (function(){
           "table": "table",
           "treemap": "treemap",
           "scatter": "scatterplot"
-        }
+        },
+        cardinalityLimit: 1000
       }
     },
     fieldsFetched: {
@@ -610,6 +613,9 @@ var SenseSearchInput = (function(){
             term.senseInfo = {
               viz: this.nlpModel.vizTypeMap[termText]
             };
+          }
+          else if (this.nlpModel.distinctMap[termText]) {
+            term.queryTag = "distinct";
           }
           else if (this.nlpModel.comparatives[termText]) {
             // term.queryTag = "comparative";
@@ -1094,12 +1100,54 @@ var SenseSearchInput = (function(){
             }]
           }
         };
-        var dimensions={},measures={},fields=[],aggregations={},sorting={},sets=[],time=[],func=null,ambiguousSort=null;
+        var dimensions={},measures={},fields=[],aggregations={},sorting={},sets={},setCount=0,time=[],func=null,ambiguousSort=null;
         var dimensionIndexMap={},measureIndexMap={};
-        var dimensionCount=-1,measureCount=-1;
+        var dimensionCount=0,measureCount=0;
         var columnWidths = [];
         var chartType;
-        //first organise the terms into their sense component parts
+        //first check to see if any of our dims should be treated as measures based on functions
+        for(var t=0;t<this.nlpTerms.length;t++){
+          if(this.nlpTerms[t].senseType == "exp"){
+            measureCount++;
+          }
+          if(this.nlpTerms[t].senseType == "dim"){
+            if(this.nlpTerms[t-1]){
+              if(this.nlpModel.distinctMap[this.nlpTerms[t-1].text]){
+                this.nlpTerms[t].senseType = "exp";
+                this.nlpTerms[t].senseInfo.countDistinct = true;
+                this.nlpTerms[t].senseInfo.func = "count";
+                measureCount++;
+              }
+              else if (this.nlpTerms[t-1].senseType=="function") {
+                this.nlpTerms[t].senseType = "exp";
+                this.nlpTerms[t].senseInfo.func = this.nlpTerms[t-1].senseInfo.func;
+                measureCount++;
+              }
+            }
+          }
+        }
+
+        if(measureCount==0){
+          //we need a measure for something to render
+          for(var t=0;t<this.nlpTerms.length;t++){
+            if(measureCount==0){
+              if(this.nlpTerms[t].senseType == "dim"){
+                if(senseSearch.appFieldsByTag.$possibleMeasure && senseSearch.appFieldsByTag.$possibleMeasure[this.nlpTerms[t].parsedText]){
+                  this.nlpTerms[t].senseType = "exp";
+                  measureCount++;
+                  if(senseSearch.appFieldsByTag.$numeric && senseSearch.appFieldsByTag.$numeric[this.nlpTerms[t].parsedText]){
+                    this.nlpTerms[t].senseInfo.func = this.nlpModel.defaultFunction;
+                  }
+                  else {
+                    this.nlpTerms[t].senseInfo.func = "count";
+                  }
+                }
+              }
+            }
+          }
+        }
+        dimensionCount=-1,measureCount=-1;
+        //then organise the terms into their sense component parts
         for(var t=0;t<this.nlpTerms.length;t++){
           switch (this.nlpTerms[t].senseType) {
             case "exp":
@@ -1116,7 +1164,13 @@ var SenseSearchInput = (function(){
               else {
                 //we have a field tagged with $measure
                 measureName = this.nlpTerms[t].senseInfo.field.qName.replace(/ /gi,"-");
-                measures[measureName] = this.nlpTerms[t].senseInfo.field;
+                measures[measureName] = { field: this.nlpTerms[t].senseInfo.field };
+                if(this.nlpTerms[t].senseInfo.countDistinct){
+                  measures[measureName].isCountDistinct = true;
+                }
+                if(this.nlpTerms[t].senseInfo.func){
+                  measures[measureName].func = this.nlpTerms[t].senseInfo.func;
+                }
               }
               measureCount++;
               measureIndexMap[measureName]=measureCount;
@@ -1146,24 +1200,32 @@ var SenseSearchInput = (function(){
             case "viz":
               chartType = this.nlpTerms[t].senseInfo.viz;
               break;
-            case "value": //currently only supports a single value
+            case "value":
               var fieldName, normalizedName;
               if(this.nlpTerms[t].senseInfo.field.qInfo){
-                // normalizedName = normalizeText(this.nlpTerms[t].senseInfo.field.qData.title);
+                normalizedName = normalizeText(this.nlpTerms[t].senseInfo.field.qData.title);
                 fieldName = this.nlpTerms[t].senseInfo.field.qData.title;
               }
               else {
-                // normalizedName = normalizeText(this.nlpTerms[t].senseInfo.field.qName);
+                normalizedName = normalizeText(this.nlpTerms[t].senseInfo.field.qName);
                 fieldName = this.nlpTerms[t].senseInfo.field.qName;
               }
+              if(!sets[normalizedName]){
+                sets[normalizedName] = {
+                  field: fieldName,
+                  selector: this.nlpTerms[t].senseInfo.fieldSelection,
+                  values: []
+                };
+              }
               var set = "";
-              set += "[" + fieldName + "]";
-              set += this.nlpTerms[t].senseInfo.fieldSelection;
-              set += "{'";
+              // set += "[" + fieldName + "]";
+              // set += this.nlpTerms[t].senseInfo.fieldSelection;
+              set += "'";
               set += this.nlpTerms[t].text;
-              set += "*'}";
-              set += "";
-              sets.push(set);
+              set += "*'";
+              // set += "";
+              sets[normalizedName].values.push(set);
+              setCount++;
               break;
             case "sortfield":
               var sortName = this.nlpTerms[t].senseInfo.field.qName.replace(/ /gi,"-");
@@ -1209,15 +1271,26 @@ var SenseSearchInput = (function(){
           }
           else{
             var measDef = "=num(";
-            measDef += func || this.nlpModel.defaultFunction;
-            measDef += "({$";
-            if(sets.length > 0){
+            measDef += measures[m].func || func || this.nlpModel.defaultFunction;
+            measDef += "(";
+            if(measures[m].isCountDistinct){
+              measDef+= "DISTINCT ";
+            }
+            measDef += "{$";
+            if(setCount > 0){
               measDef += "<";
-              measDef += sets.join(",");
+              for(var s in sets){
+                measDef += "[" + sets[s].field + "]";
+                measDef += sets[s].selector;
+                measDef += "{";
+                measDef += sets[s].values.join(",");
+                measDef += "}";
+              }
+              // measDef += sets.join(",");
               measDef += ">";
             }
             measDef += "}";
-            measDef += "[" + measures[m].qName + "]";
+            measDef += "[" + measures[m].field.qName + "]";
             measDef += "), '";
             if(senseSearch.appFieldsByTag.$currency && senseSearch.appFieldsByTag.$currency[m] && func!=="count"){
                 measDef += this.nlpModel.currencySymbol;
@@ -1226,16 +1299,16 @@ var SenseSearchInput = (function(){
             var mDef = {
               qDef: {
                 qDef: measDef,
-                label: measures[m].qName
+                label: measures[m].field.qName
               }
             };
-            fields.push(measures[m].qName);
+            fields.push(measures[m].field.qName);
             if(sorting[m]){
               var sortType = "qSortByNumeric";
               var sortOrder = sorting[m].order || 1;
               mDef.qSortBy = {};
               mDef.qSortBy[sortType] = sortOrder;
-              hDef.qHyperCubeDef.qInterColumnSortOrder = [fields.indexOf(measures[m].qName)];
+              hDef.qHyperCubeDef.qInterColumnSortOrder = [fields.indexOf(measures[m].field.qName)];
             }
           }
           hDef.qHyperCubeDef.qMeasures.push(mDef);
@@ -1412,13 +1485,14 @@ var SenseSearchInput = (function(){
 
 var SenseSearchResult = (function(){
 
-  var templateHtml = "<div id='{id}_results' class='sense-search-results'></div>";
+  var templateHtml = "<div id='{id}_results_loading' class='sense-search-results_loading on'><div class='sense-search-results_loading-spinner'>Loading...</div></div><div id='{id}_results' class='sense-search-results'></div>";
 
   function SenseSearchResult(id, options){
     var element = document.createElement("div");
     element.id = id;
     element.classList.add("sense-search-results-container");
     this.resultsElement = id + "_results";
+    this.loadingElement = id + "_results_loading";
     var html = templateHtml.replace(/{id}/gim, id);
     element.innerHTML = html;
     options = options || {};
@@ -1480,6 +1554,7 @@ var SenseSearchResult = (function(){
             });
           }
           if(!this.attached){
+            senseSearch.searchStarted.subscribe(this.onSearchStarted.bind(this));
             senseSearch.searchResults.subscribe(this.onSearchResults.bind(this));
             senseSearch.noResults.subscribe(this.onNoResults.bind(this));
             senseSearch.chartResults.subscribe(this.onChartResults.bind(this));
@@ -1488,6 +1563,7 @@ var SenseSearchResult = (function(){
           }
           senseSearch.results[this.id] = this;
         }
+        this.hideLoading();
       }
     },
     fields:{
@@ -1543,8 +1619,30 @@ var SenseSearchResult = (function(){
       writable: true,
       value: null
     },
+    showLoading:{
+      value: function(){
+        var loadingElem = document.getElementById(this.loadingElement);
+        if(loadingElem){
+          loadingElem.classList.add('on');
+        }
+      }
+    },
+    hideLoading:{
+      value: function(){
+        var loadingElem = document.getElementById(this.loadingElement);
+        if(loadingElem){
+          loadingElem.classList.remove('on');
+        }
+      }
+    },
+    onSearchStarted:{
+      value: function(){
+        this.showLoading();
+      }
+    },
     onSearchResults:{
       value: function(results){
+        this.hideLoading();
         this.data = []; //after each new search we clear out the previous results
         this.pageTop = 0;
         this.getHyperCubeData();
@@ -1554,6 +1652,7 @@ var SenseSearchResult = (function(){
       value: function(genericObject){
         console.log("Chart created");
         console.log(genericObject);
+        this.hideLoading();
         var chartElem = document.createElement('div');
         chartElem.classList.add('chart-result');
         var parentElem = document.getElementById(this.resultsElement);
@@ -1568,11 +1667,13 @@ var SenseSearchResult = (function(){
     },
     onNoResults: {
       value:  function(){
+        this.hideLoading();
         this.renderItems([]);
       }
     },
     onClear:{
       value: function(){
+        this.hideLoading();
         document.getElementById(this.id+"_results").innerHTML = "";
       }
     },
@@ -2042,6 +2143,7 @@ var SenseSearch = (function(){
 
   function SenseSearch(){
     this.ready = new Subscription();
+    this.searchStarted = new Subscription();
     this.searchResults = new Subscription();
     this.searchAssociations = new Subscription();
     this.fieldsFetched = new Subscription();
@@ -2160,6 +2262,7 @@ var SenseSearch = (function(){
     },
     search: {
       value: function(searchText, searchFields, mode, context){
+        this.searchStarted.deliver();
         var that = this;
         mode = mode || "simple";
         context = context || this.context || "LockedFieldsOnly"
@@ -2210,6 +2313,7 @@ var SenseSearch = (function(){
     },
     createViz: {
       value: function(def){
+        this.searchStarted.deliver();
         var that = this;
         that.pendingChart = this.exchange.seqId+1;
         if(this.exchange.connectionType=="CapabilityAPI"){
@@ -2257,7 +2361,7 @@ var SenseSearch = (function(){
       }
     },
     getAppFields:{
-      value: function(){
+      value: function(cardinalityLimit){
         var that = this;
         var CALL_COUNT = 2;
         var responseData = {
@@ -2273,7 +2377,7 @@ var SenseSearch = (function(){
             responseData.fields = response.result.qLayout.qFieldList.qItems;
             responseData.setCount++;
             if(responseData.setCount===CALL_COUNT){
-              that.sortFieldsByTag(responseData);
+              that.sortFieldsByTag(responseData, cardinalityLimit);
             }
           });
         });
@@ -2284,7 +2388,7 @@ var SenseSearch = (function(){
             responseData.dimensions = response.result.qLayout.qDimensionList.qItems;
             responseData.setCount++;
             if(responseData.setCount===CALL_COUNT){
-              that.sortFieldsByTag(responseData);
+              that.sortFieldsByTag(responseData, cardinalityLimit);
             }
           });
         });
@@ -2304,7 +2408,7 @@ var SenseSearch = (function(){
       }
     },
     sortFieldsByTag:{
-      value: function(fieldData){
+      value: function(fieldData, cardinalityLimit){
         //organise the fields
         for (var i=0;i<fieldData.fields.length;i++){
           var fieldName = fieldData.fields[i].qName.toLowerCase().replace(/ /gi, "_");
@@ -2316,6 +2420,12 @@ var SenseSearch = (function(){
             this.appFieldsByTag[fieldData.fields[i].qTags[t]][fieldName] = {
               fieldName: fieldData.fields[i].qName
             };
+            if(fieldData.fields[i].qCardinal > cardinalityLimit){
+              if(!this.appFieldsByTag.$possibleMeasure){
+                this.appFieldsByTag.$possibleMeasure = {}
+              }
+              this.appFieldsByTag.$possibleMeasure[fieldName] = {fieldName: fieldData.fields[i].qName};
+            }
           }
         }
         //organise the dimensions
@@ -2328,6 +2438,12 @@ var SenseSearch = (function(){
           this.appFieldsByTag.$dimension[fieldName] = {
             fieldName: fieldData.dimensions[i].qData.title
           };
+          if(fieldData.fields[i].qCardinal > cardinalityLimit){
+            if(!this.appFieldsByTag.$possibleMeasure){
+              this.appFieldsByTag.$possibleMeasure = {}
+            }
+            this.appFieldsByTag.$possibleMeasure[fieldName] = {fieldName: fieldData.fields[i].qName};
+          }
           for (var t=0;t<fieldData.dimensions[i].qMeta.tags.length;t++){
             var tag = fieldData.dimensions[i].qMeta.tags[t];
             if(tag.indexOf("$")==-1){
@@ -2364,9 +2480,13 @@ var SenseSearch = (function(){
             };
           }
         }
-        console.log(fieldData);
+        console.log(this.appFieldsByTag);
         this.fieldsFetched.deliver();
       }
+    },
+    searchStarted:{
+      writable: true,
+      value: null
     },
     searchResults:{
       writable: true,
