@@ -53,9 +53,12 @@ var SenseSearchInput = (function(){
       this.allowNLP = false;
     }
     this.id = id;
-    element.onkeyup = this.onKeyUp.bind(this);
-    element.onkeydown = this.onKeyDown.bind(this);
-    element.onclick = this.onClick.bind(this);
+    // element.onkeyup = this.onKeyUp.bind(this);
+    // element.onkeydown = this.onKeyDown.bind(this);
+    // element.onclick = this.onClick.bind(this);
+    element.addEventListener('keyup', this.onKeyUp.bind(this));
+    element.addEventListener('keydown', this.onKeyDown.bind(this));
+    element.addEventListener('click', this.onClick.bind(this));
     var oldElement = document.getElementById(id);
     if (oldElement) {
         if(oldElement.attributes["mode"]){
