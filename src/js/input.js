@@ -56,9 +56,9 @@ var SenseSearchInput = (function(){
     // element.onkeyup = this.onKeyUp.bind(this);
     // element.onkeydown = this.onKeyDown.bind(this);
     // element.onclick = this.onClick.bind(this);
-    element.addEventListener('keyup', this.onKeyUp.bind(this));
-    element.addEventListener('keydown', this.onKeyDown.bind(this));
-    element.addEventListener('click', this.onClick.bind(this));
+    element.addEventListener('keyup', this.onKeyUp.bind(this), false);
+    element.addEventListener('keydown', this.onKeyDown.bind(this), false);
+    element.addEventListener('click', this.onClick.bind(this), false);    
     var oldElement = document.getElementById(id);
     if (oldElement) {
         if(oldElement.attributes["mode"]){
@@ -1144,6 +1144,10 @@ var SenseSearchInput = (function(){
                   else {
                     this.nlpTerms[t].senseInfo.func = "count";
                   }
+                }
+                else if(this.nlpTerms.length==1){
+                  this.nlpTerms[t].senseType = "exp";
+                  this.nlpTerms[t].senseInfo.func = "count";
                 }
               }
             }

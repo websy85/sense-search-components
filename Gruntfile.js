@@ -27,10 +27,11 @@ module.exports = function(grunt) {
         files: [
           {
             "build/sense-search.css": "src/less/main.less" // destination file and source file
-          },
-          {
-            "/Users/nwr/2016/Development/Node/nlp-testing/public/sense-search.css": "src/less/main.less" // destination file and source file
           }
+          // ,
+          // {
+          //   "/Users/nwr/2016/Development/Node/nlp-testing/public/sense-search.css": "src/less/main.less" // destination file and source file
+          // }
         ]
       },
       production: {
