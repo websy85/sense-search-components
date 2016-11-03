@@ -58,7 +58,7 @@ var SenseSearchInput = (function(){
     // element.onclick = this.onClick.bind(this);
     element.addEventListener('keyup', this.onKeyUp.bind(this), false);
     element.addEventListener('keydown', this.onKeyDown.bind(this), false);
-    element.addEventListener('click', this.onClick.bind(this), false);    
+    element.addEventListener('click', this.onClick.bind(this), false);
     var oldElement = document.getElementById(id);
     if (oldElement) {
         if(oldElement.attributes["mode"]){
@@ -1286,14 +1286,17 @@ var SenseSearchInput = (function(){
             measDef += "{$";
             if(setCount > 0){
               measDef += "<";
+              measSets = [];
               for(var s in sets){
-                measDef += "[" + sets[s].field + "]";
-                measDef += sets[s].selector;
-                measDef += "{";
-                measDef += sets[s].values.join(",");
-                measDef += "}";
+                var tempDef = "";
+                tempDef += "[" + sets[s].field + "]";
+                tempDef += sets[s].selector;
+                tempDef += "{";
+                tempDef += sets[s].values.join(",");
+                tempDef += "}";
+                measSets.push(tempDef);
               }
-              // measDef += sets.join(",");
+              measDef += measSets.join(",");
               measDef += ">";
             }
             measDef += "}";
