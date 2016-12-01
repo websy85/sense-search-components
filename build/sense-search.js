@@ -2106,6 +2106,7 @@ var SenseSearch = (function(){
         value: function(handle, method, args, callbackFn){
           var that = this;
           this.seqId++;
+          this.connection.seqid++;
           this.connection.ask(handle, method, args, this.seqId).then(function(response){
             if(response.error){
 
