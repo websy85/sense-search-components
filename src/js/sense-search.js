@@ -222,9 +222,22 @@ var SenseSearch = (function(){
       }
     },
     clear:{
-      value: function(){
-        this.terms = null;
-        this.cleared.deliver();
+      value: function(unlock){
+        var that = this;
+        if(unlock===true){
+          this.exchange.ask(this.appHandle, "UnlockAll", [], function(response){
+            that.exchange.ask(that.appHandle, "ClearAll", [], function(response){
+              that.terms = null;
+              that.cleared.deliver();
+            });
+          })
+        }
+        else{
+          this.exchange.ask(this.appHandle, "ClearAll", [], function(response){
+            that.terms = null;
+            that.cleared.deliver();
+          });
+        }
       }
     },
     getAppFields:{

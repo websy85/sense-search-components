@@ -83,9 +83,10 @@ var Exchange = (function(){
     askQSocks:{
       value: function(handle, method, args, callbackFn){
         var that = this;
-        this.seqId++;
+        // this.seqId++;
         this.connection.seqid++;
-        this.connection.ask(handle, method, args, this.seqId).then(function(response){
+        this.seqId = this.connection.seqid;
+        this.connection.ask(handle, method, args, this.connection.seqid).then(function(response){
           if(response.error){
 
           }

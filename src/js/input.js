@@ -337,6 +337,7 @@ var SenseSearchInput = (function(){
         this.nlpTermsPositions = [];
         this.currentTerm = null;
         this.hideSuggestions();
+        this.hideAssociations();
         this.clearLozenges();
       }
     },

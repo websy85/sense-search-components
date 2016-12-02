@@ -337,6 +337,7 @@ var SenseSearchInput = (function(){
         this.nlpTermsPositions = [];
         this.currentTerm = null;
         this.hideSuggestions();
+        this.hideAssociations();
         this.clearLozenges();
       }
     },
@@ -1666,12 +1667,14 @@ var SenseSearchResult = (function(){
       }
     },
     onNoResults: {
+      writable: true,
       value:  function(){
         this.hideLoading();
         this.renderItems([]);
       }
     },
     onClear:{
+      writable: true,
       value: function(){
         this.hideLoading();
         document.getElementById(this.id+"_results").innerHTML = "";
@@ -2105,9 +2108,10 @@ var SenseSearch = (function(){
       askQSocks:{
         value: function(handle, method, args, callbackFn){
           var that = this;
-          this.seqId++;
+          // this.seqId++;
           this.connection.seqid++;
-          this.connection.ask(handle, method, args, this.seqId).then(function(response){
+          this.seqId = this.connection.seqid;
+          this.connection.ask(handle, method, args, this.connection.seqid).then(function(response){
             if(response.error){
 
             }
@@ -2356,9 +2360,22 @@ var SenseSearch = (function(){
       }
     },
     clear:{
-      value: function(){
-        this.terms = null;
-        this.cleared.deliver();
+      value: function(unlock){
+        var that = this;
+        if(unlock===true){
+          this.exchange.ask(this.appHandle, "UnlockAll", [], function(response){
+            that.exchange.ask(that.appHandle, "ClearAll", [], function(response){
+              that.terms = null;
+              that.cleared.deliver();
+            });
+          })
+        }
+        else{
+          this.exchange.ask(this.appHandle, "ClearAll", [], function(response){
+            that.terms = null;
+            that.cleared.deliver();
+          });
+        }
       }
     },
     getAppFields:{

@@ -181,12 +181,14 @@ var SenseSearchResult = (function(){
       }
     },
     onNoResults: {
+      writable: true,
       value:  function(){
         this.hideLoading();
         this.renderItems([]);
       }
     },
     onClear:{
+      writable: true,
       value: function(){
         this.hideLoading();
         document.getElementById(this.id+"_results").innerHTML = "";
