@@ -301,6 +301,10 @@ var SenseSearchInput = (function(){
         this.activateInput();
       }
     },
+    lastSelectedGroup:{
+      writable: true,
+      value: null
+    },
     appFields:{
       writable: true,
       value: {}
@@ -336,6 +340,7 @@ var SenseSearchInput = (function(){
         this.nlpResolvedTerms = {};
         this.nlpTermsPositions = [];
         this.currentTerm = null;
+        this.lastSelectedGroup = null;
         this.hideSuggestions();
         this.hideAssociations();
         this.clearLozenges();
@@ -670,6 +675,7 @@ var SenseSearchInput = (function(){
             //a child of a child was clicked (messy, needs reqorking to be more dynamic)
             assocationIndex = parseInt(event.target.parentNode.parentNode.attributes['data-index'].value);
           }
+          this.lastSelectedGroup = assocationIndex;
           senseSearch.selectAssociations(this.searchFields || [],  assocationIndex);
           this.hideAssociations();
           this.hideSuggestions();
@@ -924,7 +930,11 @@ var SenseSearchInput = (function(){
           for (var j=0;j<termsMatched.length;j++){  //loops through each valid association
             html += "<li class='sense-search-association-item' data-index='"+j+"'>";
             for(var k=0;k<termsMatched[j].qFieldMatches.length;k++){  //loops through each field in the association
-              var extraClass = termsMatched[j].qFieldMatches.length>1?"small":"";
+              // var extraClass = termsMatched[j].qFieldMatches.length>1?"small":"";
+              var extraStyle = "";
+              if (termsMatched[j].qFieldMatches.length > 1) {
+                extraStyle = 'width: '+Math.floor(100/termsMatched[j].qFieldMatches.length)+'%;';
+              }
               var fieldMatch = termsMatched[j].qFieldMatches[k];
               var fieldName = this.associations.qFieldNames[fieldMatch.qField];
               var fieldValues = [];
@@ -932,7 +942,7 @@ var SenseSearchInput = (function(){
                 var highlightedValue = highlightAssociationValue(this.associations.qFieldDictionaries[fieldMatch.qField].qResult[v], fieldMatch.qTerms);
                 fieldValues.push(highlightedValue);
               }
-              html += "<div class='"+extraClass+"'>";
+              html += "<div style='"+extraStyle+"'>";
               html += "<h1>"+fieldName+"</h1>";
               for (var v=0; v < fieldValues.length; v++){
                 html += fieldValues[v];
@@ -1360,7 +1370,7 @@ var SenseSearchInput = (function(){
             }
           }
         }
-        hDef.qInfo.qType = chartType;
+        hDef.qInfo.qType = this.nlpModel.vizTypeMap[chartType] || chartType;
         if(hDef.qInfo.qType=="table"){
           // hDef.qHyperCubeDef.columnWidths = columnWidths;
         }
@@ -1454,7 +1464,7 @@ var SenseSearchInput = (function(){
       text.splice((match.qRanges[r].qCharPos+match.qRanges[r].qCharCount), 0, "</span>")
       text.splice(match.qRanges[r].qCharPos, 0, "<span class='highlight"+match.qRanges[r].qTerm+"'>");
     }
-    text = text.join("");
+    text = text.join("").replace(/<(?!\/?span(?=>|\s.*>))\/?.*?>/gim, '');  //we strip out any html tags other than <span>
     return text;
   };
 

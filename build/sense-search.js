@@ -301,6 +301,10 @@ var SenseSearchInput = (function(){
         this.activateInput();
       }
     },
+    lastSelectedGroup:{
+      writable: true,
+      value: null
+    },
     appFields:{
       writable: true,
       value: {}
@@ -336,6 +340,7 @@ var SenseSearchInput = (function(){
         this.nlpResolvedTerms = {};
         this.nlpTermsPositions = [];
         this.currentTerm = null;
+        this.lastSelectedGroup = null;
         this.hideSuggestions();
         this.hideAssociations();
         this.clearLozenges();
@@ -670,6 +675,7 @@ var SenseSearchInput = (function(){
             //a child of a child was clicked (messy, needs reqorking to be more dynamic)
             assocationIndex = parseInt(event.target.parentNode.parentNode.attributes['data-index'].value);
           }
+          this.lastSelectedGroup = assocationIndex;
           senseSearch.selectAssociations(this.searchFields || [],  assocationIndex);
           this.hideAssociations();
           this.hideSuggestions();
@@ -924,7 +930,11 @@ var SenseSearchInput = (function(){
           for (var j=0;j<termsMatched.length;j++){  //loops through each valid association
             html += "<li class='sense-search-association-item' data-index='"+j+"'>";
             for(var k=0;k<termsMatched[j].qFieldMatches.length;k++){  //loops through each field in the association
-              var extraClass = termsMatched[j].qFieldMatches.length>1?"small":"";
+              // var extraClass = termsMatched[j].qFieldMatches.length>1?"small":"";
+              var extraStyle = "";
+              if (termsMatched[j].qFieldMatches.length > 1) {
+                extraStyle = 'width: '+Math.floor(100/termsMatched[j].qFieldMatches.length)+'%;';
+              }
               var fieldMatch = termsMatched[j].qFieldMatches[k];
               var fieldName = this.associations.qFieldNames[fieldMatch.qField];
               var fieldValues = [];
@@ -932,7 +942,7 @@ var SenseSearchInput = (function(){
                 var highlightedValue = highlightAssociationValue(this.associations.qFieldDictionaries[fieldMatch.qField].qResult[v], fieldMatch.qTerms);
                 fieldValues.push(highlightedValue);
               }
-              html += "<div class='"+extraClass+"'>";
+              html += "<div style='"+extraStyle+"'>";
               html += "<h1>"+fieldName+"</h1>";
               for (var v=0; v < fieldValues.length; v++){
                 html += fieldValues[v];
@@ -1360,7 +1370,7 @@ var SenseSearchInput = (function(){
             }
           }
         }
-        hDef.qInfo.qType = chartType;
+        hDef.qInfo.qType = this.nlpModel.vizTypeMap[chartType] || chartType;
         if(hDef.qInfo.qType=="table"){
           // hDef.qHyperCubeDef.columnWidths = columnWidths;
         }
@@ -1454,7 +1464,7 @@ var SenseSearchInput = (function(){
       text.splice((match.qRanges[r].qCharPos+match.qRanges[r].qCharCount), 0, "</span>")
       text.splice(match.qRanges[r].qCharPos, 0, "<span class='highlight"+match.qRanges[r].qTerm+"'>");
     }
-    text = text.join("");
+    text = text.join("").replace(/<(?!\/?span(?=>|\s.*>))\/?.*?>/gim, '');  //we strip out any html tags other than <span>
     return text;
   };
 
@@ -1547,12 +1557,23 @@ var SenseSearchResult = (function(){
         if(senseSearch && senseSearch.exchange.connection){
           if(options && options.fields){
             var hDef = this.buildHyperCubeDef();
-            senseSearch.exchange.ask(senseSearch.appHandle, "CreateSessionObject", [hDef], function(response){
-              that.handle = response.result.qReturn.qHandle;
-              if(typeof(callbackFn)==="function"){
-                callbackFn.call(null);
-              }
-            });
+            if(senseSearch.exchange.connectionType=="CapabilityAPI"){
+              senseSearch.exchange.app.createCube(hDef.qHyperCubeDef, this.onSearchResults.bind(this)).then(function(response){
+                console.log(response);
+                that.handle = response.handle;
+                if(typeof(callbackFn)==="function"){
+                  callbackFn.call(null);
+                }
+              });
+            }
+            else {
+              senseSearch.exchange.ask(senseSearch.appHandle, "CreateSessionObject", [hDef], function(response){
+                that.handle = response.result.qReturn.qHandle;
+                if(typeof(callbackFn)==="function"){
+                  callbackFn.call(null);
+                }
+              });
+            }
           }
           if(!this.attached){
             senseSearch.searchStarted.subscribe(this.onSearchStarted.bind(this));
@@ -1620,6 +1641,10 @@ var SenseSearchResult = (function(){
       writable: true,
       value: null
     },
+    latestLayout:{
+      writable: true,
+      value: null
+    },
     showLoading:{
       value: function(){
         var loadingElem = document.getElementById(this.loadingElement);
@@ -1646,7 +1671,9 @@ var SenseSearchResult = (function(){
         this.hideLoading();
         this.data = []; //after each new search we clear out the previous results
         this.pageTop = 0;
-        this.getHyperCubeData();
+        if(this.handle){
+          this.getHyperCubeData();
+        }
       }
     },
     onChartResults:{
@@ -1691,30 +1718,33 @@ var SenseSearchResult = (function(){
         var that = this;
         senseSearch.exchange.getLayout(this.handle, function(response){
           var layout = response.result.qLayout;
+          that.latestLayout = layout;
           var qFields = layout.qHyperCube.qDimensionInfo.concat(layout.qHyperCube.qMeasureInfo);
           senseSearch.exchange.ask(that.handle, "GetHyperCubeData", ["/qHyperCubeDef", [{qTop: that.pageTop, qLeft:0, qHeight: that.pageSize, qWidth: that.fields.length }]], function(response){
-            if(callbackFn && typeof(callbackFn)==="function"){
-              callbackFn.call(this, response);
-            }
-            else {
-              var data = response.result.qDataPages;
-              var items = [];
-              for(var i=0;i<data[0].qMatrix.length;i++){
-                var item = {}
-                //if the nullSuppressor field is null then we throw out the row
-                if(this.nullSuppressor && this.nullSuppressor!=null && data[0].qMatrix[i][$scope.config.nullSuppressor].qText=="-"){
-                  continue;
-                }
-                for (var j=0; j < data[0].qMatrix[i].length; j++){
-                  item[qFields[j].qFallbackTitle] = {
-                    value: data[0].qMatrix[i][j].qText,
-                    html: that.highlightText(data[0].qMatrix[i][j].qText)
-                  }
-                }
-                items.push(item);
+            if(senseSearch.exchange.seqId==response.id){
+              if(callbackFn && typeof(callbackFn)==="function"){
+                callbackFn.call(this, response);
               }
-              that.data = that.data.concat(items);
-              that.renderItems(items);
+              else {
+                var data = response.result.qDataPages;
+                var items = [];
+                for(var i=0;i<data[0].qMatrix.length;i++){
+                  var item = {}
+                  //if the nullSuppressor field is null then we throw out the row
+                  if(that.nullSuppressor && that.nullSuppressor!=null && data[0].qMatrix[i][that.nullSuppressor].qText=="-"){
+                    continue;
+                  }
+                  for (var j=0; j < data[0].qMatrix[i].length; j++){
+                    item[qFields[j].qFallbackTitle] = {
+                      value: data[0].qMatrix[i][j].qText,
+                      html: that.highlightText(data[0].qMatrix[i][j].qText)
+                    }
+                  }
+                  items.push(item);
+                }
+                that.data = that.data.concat(items);
+                that.renderItems(items);
+              }  
             }
           });
         });
@@ -2302,6 +2332,26 @@ var SenseSearch = (function(){
         var that = this;
         that.exchange.ask(that.appHandle, "SelectAssociations", [{qContext: context, qSearchFields: searchFields}, that.terms, resultGroup], function(response){
           that.searchResults.deliver(response.change);
+        });
+      }
+    },
+    searchAndSelect: {
+      value: function(searchText, searchFields, resultGroup, context){
+        this.searchStarted.deliver();
+        var that = this;
+        context = context || this.context || "LockedFieldsOnly"
+        this.pendingSearch = this.exchange.seqId+1;
+        this.terms = searchText.split(" ");
+        this.exchange.ask(this.appHandle, "SearchAssociations", [{qContext: context, qSearchFields: searchFields}, this.terms, {qOffset: 0, qCount: 5, qMaxNbrFieldMatches: 5}], function(response){
+          if(response.id == that.pendingSearch || response.id == that.exchange.seqId){
+            if(searchText== "" || response.result.qResults.qTotalSearchResults>0){
+              that.selectAssociations(searchFields, resultGroup, context);
+            }
+            else{
+              //we send a no results instruction
+              that.noResults.deliver();
+            }
+          }
         });
       }
     },

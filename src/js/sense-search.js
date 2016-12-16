@@ -167,6 +167,26 @@ var SenseSearch = (function(){
         });
       }
     },
+    searchAndSelect: {
+      value: function(searchText, searchFields, resultGroup, context){
+        this.searchStarted.deliver();
+        var that = this;
+        context = context || this.context || "LockedFieldsOnly"
+        this.pendingSearch = this.exchange.seqId+1;
+        this.terms = searchText.split(" ");
+        this.exchange.ask(this.appHandle, "SearchAssociations", [{qContext: context, qSearchFields: searchFields}, this.terms, {qOffset: 0, qCount: 5, qMaxNbrFieldMatches: 5}], function(response){
+          if(response.id == that.pendingSearch || response.id == that.exchange.seqId){
+            if(searchText== "" || response.result.qResults.qTotalSearchResults>0){
+              that.selectAssociations(searchFields, resultGroup, context);
+            }
+            else{
+              //we send a no results instruction
+              that.noResults.deliver();
+            }
+          }
+        });
+      }
+    },
     suggest:{
       value: function(searchText, suggestFields, context){
         var that = this;

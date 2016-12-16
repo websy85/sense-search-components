@@ -61,12 +61,23 @@ var SenseSearchResult = (function(){
         if(senseSearch && senseSearch.exchange.connection){
           if(options && options.fields){
             var hDef = this.buildHyperCubeDef();
-            senseSearch.exchange.ask(senseSearch.appHandle, "CreateSessionObject", [hDef], function(response){
-              that.handle = response.result.qReturn.qHandle;
-              if(typeof(callbackFn)==="function"){
-                callbackFn.call(null);
-              }
-            });
+            if(senseSearch.exchange.connectionType=="CapabilityAPI"){
+              senseSearch.exchange.app.createCube(hDef.qHyperCubeDef, this.onSearchResults.bind(this)).then(function(response){
+                console.log(response);
+                that.handle = response.handle;
+                if(typeof(callbackFn)==="function"){
+                  callbackFn.call(null);
+                }
+              });
+            }
+            else {
+              senseSearch.exchange.ask(senseSearch.appHandle, "CreateSessionObject", [hDef], function(response){
+                that.handle = response.result.qReturn.qHandle;
+                if(typeof(callbackFn)==="function"){
+                  callbackFn.call(null);
+                }
+              });
+            }
           }
           if(!this.attached){
             senseSearch.searchStarted.subscribe(this.onSearchStarted.bind(this));
@@ -134,6 +145,10 @@ var SenseSearchResult = (function(){
       writable: true,
       value: null
     },
+    latestLayout:{
+      writable: true,
+      value: null
+    },
     showLoading:{
       value: function(){
         var loadingElem = document.getElementById(this.loadingElement);
@@ -160,7 +175,9 @@ var SenseSearchResult = (function(){
         this.hideLoading();
         this.data = []; //after each new search we clear out the previous results
         this.pageTop = 0;
-        this.getHyperCubeData();
+        if(this.handle){
+          this.getHyperCubeData();
+        }
       }
     },
     onChartResults:{
@@ -205,30 +222,33 @@ var SenseSearchResult = (function(){
         var that = this;
         senseSearch.exchange.getLayout(this.handle, function(response){
           var layout = response.result.qLayout;
+          that.latestLayout = layout;
           var qFields = layout.qHyperCube.qDimensionInfo.concat(layout.qHyperCube.qMeasureInfo);
           senseSearch.exchange.ask(that.handle, "GetHyperCubeData", ["/qHyperCubeDef", [{qTop: that.pageTop, qLeft:0, qHeight: that.pageSize, qWidth: that.fields.length }]], function(response){
-            if(callbackFn && typeof(callbackFn)==="function"){
-              callbackFn.call(this, response);
-            }
-            else {
-              var data = response.result.qDataPages;
-              var items = [];
-              for(var i=0;i<data[0].qMatrix.length;i++){
-                var item = {}
-                //if the nullSuppressor field is null then we throw out the row
-                if(this.nullSuppressor && this.nullSuppressor!=null && data[0].qMatrix[i][$scope.config.nullSuppressor].qText=="-"){
-                  continue;
-                }
-                for (var j=0; j < data[0].qMatrix[i].length; j++){
-                  item[qFields[j].qFallbackTitle] = {
-                    value: data[0].qMatrix[i][j].qText,
-                    html: that.highlightText(data[0].qMatrix[i][j].qText)
-                  }
-                }
-                items.push(item);
+            if(senseSearch.exchange.seqId==response.id){
+              if(callbackFn && typeof(callbackFn)==="function"){
+                callbackFn.call(this, response);
               }
-              that.data = that.data.concat(items);
-              that.renderItems(items);
+              else {
+                var data = response.result.qDataPages;
+                var items = [];
+                for(var i=0;i<data[0].qMatrix.length;i++){
+                  var item = {}
+                  //if the nullSuppressor field is null then we throw out the row
+                  if(that.nullSuppressor && that.nullSuppressor!=null && data[0].qMatrix[i][that.nullSuppressor].qText=="-"){
+                    continue;
+                  }
+                  for (var j=0; j < data[0].qMatrix[i].length; j++){
+                    item[qFields[j].qFallbackTitle] = {
+                      value: data[0].qMatrix[i][j].qText,
+                      html: that.highlightText(data[0].qMatrix[i][j].qText)
+                    }
+                  }
+                  items.push(item);
+                }
+                that.data = that.data.concat(items);
+                that.renderItems(items);
+              }  
             }
           });
         });
