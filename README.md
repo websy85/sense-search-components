@@ -1,7 +1,7 @@
 ## Sense Search Components
 A collection of HTML/JavaScript components that allow you to leverage the power of the Qlik Sense QIX engine to embed search in to a Web application or use a more natural language to generate charts on the fly.
 
-The components can be used with the Qlik Sense Capability API, a QSocks implementation or on own their own.
+The components can be used with the Qlik Sense Capability API, the Engine API (with either Enigma.js or qsocks) or on own their own.
 
 Below is a quick start guide, for more details please see the <a href='https://github.com/websy85/sense-search-components/wiki' target='_blank'>Wiki</a>. If you think there's anything missing please let me know.
 
