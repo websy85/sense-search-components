@@ -106,6 +106,15 @@ var SenseSearch = (function(){
         console.log(app);
       }
     },
+    connectWithEnigma: {
+      value:  function(app){
+        this.appHandle = app.session.apis.entries[1].api.handle;
+        this.exchange = new Exchange(app, "Enigma");
+        this.ready.deliver();
+
+        console.log(app);
+      }
+    },
     readOptions:{
       value: function(options){
         for (var o in options){

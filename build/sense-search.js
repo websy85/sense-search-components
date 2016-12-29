@@ -305,6 +305,14 @@ var SenseSearchInput = (function(){
       writable: true,
       value: null
     },
+    lastAssociationSummary: {
+      writable: true,
+      value: null
+    },
+    lastSelectedAssociation:{
+      writable: true,
+      value: null
+    },
     appFields:{
       writable: true,
       value: {}
@@ -676,6 +684,7 @@ var SenseSearchInput = (function(){
             assocationIndex = parseInt(event.target.parentNode.parentNode.attributes['data-index'].value);
           }
           this.lastSelectedGroup = assocationIndex;
+          this.lastSelectedAssociation = this.lastAssociationSummary[assocationIndex];
           senseSearch.selectAssociations(this.searchFields || [],  assocationIndex);
           this.hideAssociations();
           this.hideSuggestions();
@@ -925,12 +934,13 @@ var SenseSearchInput = (function(){
     showAssociations: {
       value: function(){
         var html = "";
+        this.lastAssociationSummary = [];
         for (var i=0;i<this.associations.qSearchTermsMatched.length;i++){ //loops through each search term match group
           var termsMatched = this.associations.qSearchTermsMatched[i];
           for (var j=0;j<termsMatched.length;j++){  //loops through each valid association
             html += "<li class='sense-search-association-item' data-index='"+j+"'>";
+            var associationSummary = [];
             for(var k=0;k<termsMatched[j].qFieldMatches.length;k++){  //loops through each field in the association
-              // var extraClass = termsMatched[j].qFieldMatches.length>1?"small":"";
               var extraStyle = "";
               if (termsMatched[j].qFieldMatches.length > 1) {
                 extraStyle = 'width: '+Math.floor(100/termsMatched[j].qFieldMatches.length)+'%;';
@@ -938,9 +948,11 @@ var SenseSearchInput = (function(){
               var fieldMatch = termsMatched[j].qFieldMatches[k];
               var fieldName = this.associations.qFieldNames[fieldMatch.qField];
               var fieldValues = [];
+              var rawFieldValues = [];
               for (var v in fieldMatch.qValues){
                 var highlightedValue = highlightAssociationValue(this.associations.qFieldDictionaries[fieldMatch.qField].qResult[v], fieldMatch.qTerms);
-                fieldValues.push(highlightedValue);
+                rawFieldValues.push(highlightedValue.matchValue);
+                fieldValues.push(highlightedValue.text);
               }
               html += "<div style='"+extraStyle+"'>";
               html += "<h1>"+fieldName+"</h1>";
@@ -951,8 +963,13 @@ var SenseSearchInput = (function(){
                 }
               }
               html += "</div>";
+              associationSummary.push({
+                field: fieldName,
+                values: rawFieldValues
+              });
             }
             html += "</li>";
+            this.lastAssociationSummary.push(associationSummary);
           }
         }
         var assListEl = document.getElementById(this.id+"_associationsList");
@@ -1460,12 +1477,19 @@ var SenseSearchInput = (function(){
   function highlightAssociationValue(match){
     var text = match.qText;
     text = text.split("");
+    var matchValue;
+    if(match.qRanges[0]!=null){
+      matchValue = {qText: match.qText.substring(match.qRanges[0].qCharPos, match.qRanges[0].qCharPos + match.qRanges[0].qCharCount )};
+    }
     for (var r = match.qRanges.length-1; r>-1;r--){
       text.splice((match.qRanges[r].qCharPos+match.qRanges[r].qCharCount), 0, "</span>")
       text.splice(match.qRanges[r].qCharPos, 0, "<span class='highlight"+match.qRanges[r].qTerm+"'>");
     }
     text = text.join("").replace(/<(?!\/?span(?=>|\s.*>))\/?.*?>/gim, '');  //we strip out any html tags other than <span>
-    return text;
+    return {
+      text: text,
+      matchValue: matchValue
+    }
   };
 
   function getGhostString(query, suggestion){
@@ -2070,6 +2094,11 @@ var SenseSearch = (function(){
         this.connection = options;
         this.seqId = this.connection.seqid;
       }
+      else if(connectionType=="Enigma"){
+        //we're connecting with a QSocks connection
+        this.connection = options.session;
+        this.seqId = this.connection.rpc.requestId;
+      }
       else if(connectionType=="CapabilityAPI"){
         this.connection = options.global.session;
         this.app = options;
@@ -2104,6 +2133,9 @@ var SenseSearch = (function(){
               break;
             case "CapabilityAPI":
               this.askCapabilityAPI(handle, method, args, callbackFn);
+              break;
+            case "Enigma":
+              this.askEnigma(handle, method, args, callbackFn);
               break;
             default:
 
@@ -2155,6 +2187,20 @@ var SenseSearch = (function(){
         value: function(handle, method, args, callbackFn){
           var that = this;
           this.connection.rpc({handle: handle, method: method, params:args }).then(function(response){
+            that.seqId = response.id;
+            if(response.error){
+
+            }
+            else{
+              callbackFn.call(null, response);
+            }
+          });
+        }
+      },
+      askEnigma:{
+        value: function(handle, method, args, callbackFn){
+          var that = this;
+          this.connection.rpc.send({handle: handle, method: method, params:args, outKey: -1, delta: false }).then(function(response){
             that.seqId = response.id;
             if(response.error){
 
@@ -2269,6 +2315,15 @@ var SenseSearch = (function(){
       value:  function(app){
         this.appHandle = app.global.session.connectedAppHandle;
         this.exchange = new Exchange(app, "CapabilityAPI");
+        this.ready.deliver();
+
+        console.log(app);
+      }
+    },
+    connectWithEnigma: {
+      value:  function(app){
+        this.appHandle = app.session.apis.entries[1].api.handle;
+        this.exchange = new Exchange(app, "Enigma");
         this.ready.deliver();
 
         console.log(app);

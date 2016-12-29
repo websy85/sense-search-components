@@ -15,6 +15,11 @@ var Exchange = (function(){
       this.connection = options;
       this.seqId = this.connection.seqid;
     }
+    else if(connectionType=="Enigma"){
+      //we're connecting with a QSocks connection
+      this.connection = options.session;
+      this.seqId = this.connection.rpc.requestId;
+    }
     else if(connectionType=="CapabilityAPI"){
       this.connection = options.global.session;
       this.app = options;
@@ -49,6 +54,9 @@ var Exchange = (function(){
             break;
           case "CapabilityAPI":
             this.askCapabilityAPI(handle, method, args, callbackFn);
+            break;
+          case "Enigma":
+            this.askEnigma(handle, method, args, callbackFn);
             break;
           default:
 
@@ -100,6 +108,20 @@ var Exchange = (function(){
       value: function(handle, method, args, callbackFn){
         var that = this;
         this.connection.rpc({handle: handle, method: method, params:args }).then(function(response){
+          that.seqId = response.id;
+          if(response.error){
+
+          }
+          else{
+            callbackFn.call(null, response);
+          }
+        });
+      }
+    },
+    askEnigma:{
+      value: function(handle, method, args, callbackFn){
+        var that = this;
+        this.connection.rpc.send({handle: handle, method: method, params:args, outKey: -1, delta: false }).then(function(response){
           that.seqId = response.id;
           if(response.error){
 
