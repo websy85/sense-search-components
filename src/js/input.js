@@ -876,7 +876,8 @@ var SenseSearchInput = (function(){
       }
     },
     setSearchText:{
-      value: function(text){
+      value: function(text, preventSearch){
+        preventSearch = preventSearch || false;
         this.searchText = text;
         this.isPaste = true;
         this.cursorPosition = text.length;
@@ -884,12 +885,12 @@ var SenseSearchInput = (function(){
         if(inputEl){
           inputEl.value = text;
         }
-        if(this.mode==="visualizations"){
+        if(this.mode==="visualizations" && !preventSearch){
           this.processTerms(this.searchText, !this.isPaste);
           this.buildLozenges();
           this.preVizSearch();
         }
-        else{
+        else if(!preventSearch){
           this.preSearch();
         }
         this.isPaste = false;
@@ -949,10 +950,12 @@ var SenseSearchInput = (function(){
               var fieldName = this.associations.qFieldNames[fieldMatch.qField];
               var fieldValues = [];
               var rawFieldValues = [];
+              var elemNumbers = [];
               for (var v in fieldMatch.qValues){
                 var highlightedValue = highlightAssociationValue(this.associations.qFieldDictionaries[fieldMatch.qField].qResult[v], fieldMatch.qTerms);
                 rawFieldValues.push(highlightedValue.matchValue);
                 fieldValues.push(highlightedValue.text);
+                elemNumbers.push(highlightedValue.elem);
               }
               html += "<div style='"+extraStyle+"'>";
               html += "<h1>"+fieldName+"</h1>";
@@ -965,7 +968,8 @@ var SenseSearchInput = (function(){
               html += "</div>";
               associationSummary.push({
                 field: fieldName,
-                values: rawFieldValues
+                values: rawFieldValues,
+                elems: elemNumbers
               });
             }
             html += "</li>";
@@ -1476,6 +1480,7 @@ var SenseSearchInput = (function(){
 
   function highlightAssociationValue(match){
     var text = match.qText;
+    var elemNum = match.qElemNumber;
     text = text.split("");
     var matchValue;
     if(match.qRanges[0]!=null){
@@ -1488,6 +1493,7 @@ var SenseSearchInput = (function(){
     text = text.join("").replace(/<(?!\/?span(?=>|\s.*>))\/?.*?>/gim, '');  //we strip out any html tags other than <span>
     return {
       text: text,
+      elem: elemNum,
       matchValue: matchValue
     }
   };

@@ -58,6 +58,7 @@ var SenseSearchResult = (function(){
             this[o] = options[o];
           }
         }
+        this.currentSort = this.defaultSort;
         if(senseSearch && senseSearch.exchange.connection){
           if(options && options.fields){
             var hDef = this.buildHyperCubeDef();
@@ -124,6 +125,10 @@ var SenseSearchResult = (function(){
       writable: true,
       value: 20
     },
+    pagesLoaded:{
+      writable: true,
+      value: []
+    },
     buildHyperCubeDef: {
       value: function(){
         var hDef = {
@@ -135,7 +140,7 @@ var SenseSearchResult = (function(){
             "qMeasures": buildMeasureDefs(this.fields),
           	"qSuppressZero": false,
           	"qSuppressMissing": false,
-          	"qInterColumnSortOrder": [this.getFieldIndex(this.defaultSort).index]
+          	"qInterColumnSortOrder": this.getInterColumnSortOrder(this.getFieldIndex(this.defaultSort).index)
           }
         };
         return hDef;
@@ -175,6 +180,7 @@ var SenseSearchResult = (function(){
         this.hideLoading();
         this.data = []; //after each new search we clear out the previous results
         this.pageTop = 0;
+        this.pagesLoaded = [];
         if(this.handle){
           this.getHyperCubeData();
         }
@@ -223,6 +229,7 @@ var SenseSearchResult = (function(){
         senseSearch.exchange.getLayout(this.handle, function(response){
           var layout = response.result.qLayout;
           that.latestLayout = layout;
+          console.trace();
           var qFields = layout.qHyperCube.qDimensionInfo.concat(layout.qHyperCube.qMeasureInfo);
           senseSearch.exchange.ask(that.handle, "GetHyperCubeData", ["/qHyperCubeDef", [{qTop: that.pageTop, qLeft:0, qHeight: that.pageSize, qWidth: that.fields.length }]], function(response){
             if(senseSearch.exchange.seqId==response.id){
@@ -246,9 +253,13 @@ var SenseSearchResult = (function(){
                   }
                   items.push(item);
                 }
-                that.data = that.data.concat(items);
+                var pageIndex = (that.pageTop / that.pageSize);
+                if(that.pagesLoaded.indexOf(pageIndex)==-1){
+                  that.pagesLoaded.push(pageIndex);
+                  that.data = that.data.concat(items);
+                }
                 that.renderItems(items);
-              }  
+              }
             }
           });
         });
@@ -266,6 +277,17 @@ var SenseSearchResult = (function(){
           }
           return 0;
         }
+    },
+    getInterColumnSortOrder: {
+      value: function(sortIndex){
+        var icso = [sortIndex];
+        for (var i=0;i<this.fields.length;i++){
+          if(i!=sortIndex){
+            icso.push(i);
+          }
+        }
+        return icso;
+      }
     },
     highlightText:{
       value: function(text){
@@ -325,15 +347,17 @@ var SenseSearchResult = (function(){
     applySort:{
       value: function(sortId, startAtZero, reRender){
         var that = this;
+        this.currentSort = sortId;
         startAtZero = startAtZero || false;
         reRender = reRender || false;
         senseSearch.exchange.ask(this.handle, "ApplyPatches", [[{
           qPath: "/qHyperCubeDef/qInterColumnSortOrder",
           qOp: "replace",
-          qValue: [that.getFieldIndex(sortId).index]
+          qValue: JSON.stringify(that.getInterColumnSortOrder(that.getFieldIndex(sortId).index))
         }], true], function(){
           if(startAtZero){
             that.pageTop = 0;
+            that.pagesLoaded = [];
           }
           if(reRender && reRender==true){
             that.getHyperCubeData();
@@ -359,7 +383,7 @@ var SenseSearchResult = (function(){
           {
             qPath: "/qHyperCubeDef/qInterColumnSortOrder",
             qOp: "replace",
-            qValue: "["+that.getFieldIndex(sortId).index+"]"
+            qValue: JSON.stringify(that.getInterColumnSortOrder(fieldIndex.index))
           },
           {
           qPath: path,
@@ -368,6 +392,7 @@ var SenseSearchResult = (function(){
         }], true], function(){
           if(startAtZero){
             that.pageTop = 0;
+            that.pagesLoaded = [];
           }
           if(reRender && reRender==true){
             that.getHyperCubeData();
@@ -389,7 +414,14 @@ var SenseSearchResult = (function(){
     		}
         if(sorting[fields[i].dimension]){
           var sort = {};
-          sort[sorting[fields[i].dimension].sortType] = sorting[fields[i].dimension].order;
+          if(typeof sorting[fields[i].dimension].sortType == "array"){
+            for(var j=0;j<sorting[fields[i].dimension].sortType.length;j++){
+              sort[sorting[fields[i].dimension].sortType[j]] = sorting[fields[i].dimension].order[j];
+            }
+          }
+          else {
+            sort[sorting[fields[i].dimension].sortType] = sorting[fields[i].dimension].order;
+          }
           if(sorting[fields[i].dimension].sortExpression){
             sort.qExpression = sorting[fields[i].dimension].sortExpression;
           }
@@ -414,7 +446,14 @@ var SenseSearchResult = (function(){
         }
         if(fields[i].sortType){
           def["qSortBy"] = {};
-          def["qSortBy"][fields[i].sortType] = fields[i].order;
+          if(typeof fields[i].sortType == "array"){
+            for(var j=0;j<fields[i].sortType.length;j++){
+              def["qSortBy"][fields[i].sortType[j]] = fields[i].order[j];
+            }
+          }
+          else{
+            def["qSortBy"][fields[i].sortType] = fields[i].order;
+          }
         }
         defs.push(def);
       }
