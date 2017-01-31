@@ -176,6 +176,10 @@ var SenseSearchInput = (function(){
       writable: true,
       value: false
     },
+    associating:{
+      writable: true,
+      value: false
+    },
     suggestingTimeout:{
       writable: true,
       value: 3000
@@ -755,6 +759,11 @@ var SenseSearchInput = (function(){
             event.preventDefault();
             this.acceptSuggestion();
           }
+          else if (this.associating && event.keyCode == Key.ENTER) {
+            event.preventDefault();
+            senseSearch.selectAssociations(this.searchFields || [],  0);
+            this.hideAssociations();
+          }
         }
         else if(event.keyCode == Key.SPACE){
           //we'll check here to make sure the latest term is at least 2 characters
@@ -935,6 +944,7 @@ var SenseSearchInput = (function(){
     showAssociations: {
       value: function(){
         var html = "";
+        this.associating = true;
         this.lastAssociationSummary = [];
         for (var i=0;i<this.associations.qSearchTermsMatched.length;i++){ //loops through each search term match group
           var termsMatched = this.associations.qSearchTermsMatched[i];
@@ -992,6 +1002,7 @@ var SenseSearchInput = (function(){
         if(assEl){
           assEl.style.display = "none";
         }
+        this.associating = false;
       }
     },
     buildLozenges: {
