@@ -688,7 +688,9 @@ var SenseSearchInput = (function(){
             assocationIndex = parseInt(event.target.parentNode.parentNode.attributes['data-index'].value);
           }
           this.lastSelectedGroup = assocationIndex;
-          this.lastSelectedAssociation = this.lastAssociationSummary[assocationIndex] || 0;
+          if(this.lastAssociationSummary && this.lastAssociationSummary.length > 0){
+            this.lastSelectedAssociation = this.lastAssociationSummary[assocationIndex];
+          }
           senseSearch.selectAssociations(this.searchFields || [],  assocationIndex);
           this.hideAssociations();
           this.hideSuggestions();
