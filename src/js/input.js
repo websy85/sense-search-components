@@ -1169,6 +1169,13 @@ var SenseSearchInput = (function(){
                 measureCount++;
               }
             }
+            else if (this.nlpTerms[t+1]) {
+              if (this.nlpTerms[t+1].senseType=="function") {
+                this.nlpTerms[t].senseType = "exp";
+                this.nlpTerms[t].senseInfo.func = this.nlpTerms[t+1].senseInfo.func;
+                measureCount++;
+              }
+            }
           }
         }
 
@@ -1186,6 +1193,11 @@ var SenseSearchInput = (function(){
                   else {
                     this.nlpTerms[t].senseInfo.func = "count";
                   }
+                }
+                else{
+                  this.nlpTerms[t].senseType = "exp";
+                  this.nlpTerms[t].senseInfo.countDistinct = true;
+                  this.nlpTerms[t].senseInfo.func = "count";
                 }
               }
             }
@@ -1324,14 +1336,17 @@ var SenseSearchInput = (function(){
             measDef += "{$";
             if(setCount > 0){
               measDef += "<";
+              var conditions = []
               for(var s in sets){
-                measDef += "[" + sets[s].field + "]";
-                measDef += sets[s].selector;
-                measDef += "{";
-                measDef += sets[s].values.join(",");
-                measDef += "}";
+                var conditionText = "";
+                conditionText += "[" + sets[s].field + "]";
+                conditionText += sets[s].selector;
+                conditionText += "{";
+                conditionText += sets[s].values.join(",");
+                conditionText += "}";
+                conditions.push(conditionText)
               }
-              // measDef += sets.join(",");
+              measDef += conditions.join(",");
               measDef += ">";
             }
             measDef += "}";
