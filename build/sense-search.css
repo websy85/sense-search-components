@@ -20,6 +20,7 @@
 }
 .sense-search-input-container {
   position: relative;
+  z-index: 1000;
   margin-bottom: 40px;
   width: 100%;
   box-sizing: border-box;
@@ -202,19 +203,19 @@
   height: 40px;
 }
 .sense-search-input-container .sense-search-ambiguity-container .ambiguity-provision[data-querytag="!!"]:after {
-  border-bottom: 2px solid #b53f3f;
+  background-color: rgba(255, 255, 255, 0.8);
   position: absolute;
-  top: 21px;
-  left: 2px;
-  right: 1px;
-  height: 0;
+  top: 2px;
+  left: 0px;
+  right: -3px;
+  bottom: 2px;
   content: "";
 }
 .sense-search-input-container .sense-search-ambiguity-container .ambiguity-provision .ambiguity {
   position: absolute;
   top: 3px;
   left: 0;
-  right: -1px;
+  right: -3px;
   background-color: rgba(255, 255, 255, 0.7);
   color: #f8981d;
   text-align: center;
@@ -233,12 +234,13 @@
   display: inline-block;
   list-style-type: none;
   background-color: white;
-  width: 100px;
+  top: 50px;
+  left: -50%;
 }
 .sense-search-input-container .sense-search-ambiguity-container .ambiguity-provision ul li {
   cursor: pointer;
   width: auto;
-  padding: 4px;
+  padding: 4px 10px;
   border-bottom: 1px solid #838383;
 }
 .sense-search-input-container .sense-search-ambiguity-container .ambiguity-provision ul li:hover {

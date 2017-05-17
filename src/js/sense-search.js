@@ -9,15 +9,7 @@ var SenseSearch = (function(){
   include "./exchange.js"
 
   function SenseSearch(){
-    this.ready = new Subscription();
-    this.searchStarted = new Subscription();
-    this.searchResults = new Subscription();
-    this.searchAssociations = new Subscription();
-    this.fieldsFetched = new Subscription();
-    this.noResults = new Subscription();
-    this.suggestResults = new Subscription();
-    this.chartResults = new Subscription();
-    this.cleared = new Subscription();
+    this.reboot();
   }
 
   SenseSearch.prototype = Object.create(Object.prototype, {
@@ -38,17 +30,37 @@ var SenseSearch = (function(){
         }
       }
     },
+    reboot: {
+      value: function(){
+        this.ready = new Subscription();
+        this.searchStarted = new Subscription();
+        this.searchResults = new Subscription();
+        this.searchAssociations = new Subscription();
+        this.fieldsFetched = new Subscription();
+        this.noResults = new Subscription();
+        this.suggestResults = new Subscription();
+        this.chartResults = new Subscription();
+        this.onSelectionsApplied = new Subscription();
+        this.onSelectionsError = new Subscription();
+        this.onLockedUnlocked = new Subscription();
+        this.cleared = new Subscription();
+        this.inputs = [];
+        this.results = [];
+      }
+    },
     appFields:{
       writable: true,
-      value: {
-        // fields: {},
-        // dimensions: {},
-        // measures: {}
-      }
+      value: {}
     },
     appFieldsByTag:{
       writable: true,
       value: {}
+    },
+    fieldsForSelecting: {
+      value: []
+    },
+    fieldHandles: {
+      value: []
     },
     inputs: {
       writable: true,
@@ -78,6 +90,9 @@ var SenseSearch = (function(){
       writable: true,
       value: null
     },
+    searchInput: {
+      value: SenseSearchInput
+    },
     connect:{
       value: function(config, callbackFn){
         var that = this;
@@ -103,7 +118,7 @@ var SenseSearch = (function(){
         this.exchange = new Exchange(app, "CapabilityAPI");
         this.ready.deliver();
 
-        console.log(app);
+        // console.log(app);
       }
     },
     connectWithEnigma: {
@@ -112,7 +127,7 @@ var SenseSearch = (function(){
         this.exchange = new Exchange(app, "Enigma");
         this.ready.deliver();
 
-        console.log(app);
+        // console.log(app);
       }
     },
     readOptions:{
@@ -207,6 +222,66 @@ var SenseSearch = (function(){
         });
       }
     },
+    selectTextInField: {
+      value: function(fieldName, values, toggle){
+        toggle = (toggle==null?true:false);
+        var that = this;
+        var valueList = [];
+        for (var i = 0; i < values.length; i++) {
+          valueList.push({
+            qText: values[i]
+          });
+        }
+        if(this.fieldsForSelecting.indexOf(fieldName)===-1){
+          this.exchange.ask(this.appHandle, "GetField", [fieldName], function(response){
+            if(response.result.qReturn.qHandle==null){
+              this.onSelectionsError.deliver();
+            }
+            else {
+              var handle = response.result.qReturn.qHandle;
+              that.fieldHandles.push(handle);
+              that.fieldsForSelecting.push(fieldName);
+              that.exchange.ask(handle, "SelectValues", [valueList, toggle], function(response){
+                that.onSelectionsApplied.deliver();
+              });
+            }
+          });
+        }
+        else {
+          var handle = this.fieldHandles[this.fieldsForSelecting.indexOf(fieldName)];
+          this.exchange.ask(handle, "SelectValues", [valueList, toggle], function(response){
+            that.onSelectionsApplied.deliver();
+          });
+        }
+      }
+    },
+    selectInField:{
+      value: function(fieldName, values, toggle){
+        toggle = (toggle==null?true:false);
+        var that = this;
+        if(this.fieldsForSelecting.indexOf(fieldName)===-1){
+          this.exchange.ask(this.appHandle, "GetField", [fieldName], function(response){
+            if(response.result.qReturn.qHandle==null){
+              this.onSelectionsError.deliver();
+            }
+            else {
+              var handle = response.result.qReturn.qHandle;
+              that.fieldHandles.push(handle);
+              that.fieldsForSelecting.push(fieldName);
+              that.exchange.ask(handle, "LowLevelSelect", [values, toggle], function(response){
+                that.onSelectionsApplied.deliver();
+              });
+            }
+          });
+        }
+        else {
+          var handle = this.fieldHandles[this.fieldsForSelecting.indexOf(fieldName)];
+          this.exchange.ask(handle, "LowLevelSelect", [values, toggle], function(response){
+            that.onSelectionsApplied.deliver();
+          });
+        }
+      }
+    },
     createViz: {
       value: function(def){
         this.searchStarted.deliver();
@@ -231,7 +306,7 @@ var SenseSearch = (function(){
             defOptions.fontSize = "S";
           }
           this.exchange.app.visualization.create(def.qInfo.qType, fieldArray, defOptions).then(function(chart){
-            console.log(chart);
+            // console.log(chart);
             // if(chart.model.layout.wsId == that.pendingChart){  //doesn't work in 2.2
               that.exchange.ask(chart.model.handle, "ApplyPatches", [[{qPath:"/qHyperCubeDef", qOp:"replace", qValue: JSON.stringify(defOptions.qHyperCubeDef)}], true], function(result){
                 chart.model.getLayout().then(function(){
@@ -239,12 +314,14 @@ var SenseSearch = (function(){
                 });
               });
             // }
-          })
+          }, logError)
         }
         else{
           this.exchange.ask(this.appHandle, "CreateSessionObject", [def], function(response){
             if(response.id == that.pendingChart){
-              that.chartResults.deliver(response.result.qReturn);
+              that.exchange.ask(response.result.qReturn.qHandle, "GetLayout", [], function(layout){
+                that.chartResults.deliver({model: response.result.qReturn, layout: layout});
+              })
             }
           });
         }
@@ -389,7 +466,7 @@ var SenseSearch = (function(){
             };
           }
         }
-        console.log(this.appFieldsByTag);
+        // console.log(this.appFieldsByTag);
         this.fieldsFetched.deliver();
       }
     },
@@ -402,6 +479,18 @@ var SenseSearch = (function(){
       value: null
     },
     searchAssociations:{
+      writable: true,
+      value: null
+    },
+    selectionsApplied:{
+      writable: true,
+      value: null
+    },
+    onSelectionsError:{
+      writable: true,
+      value: null
+    },
+    lockedUnlocked:{
       writable: true,
       value: null
     },
@@ -422,5 +511,14 @@ var SenseSearch = (function(){
   return SenseSearch;
 }());
 
-var senseSearch = new SenseSearch();
-senseSearch.init();
+if(typeof document!=="undefined"){
+  var senseSearch = new SenseSearch();
+  senseSearch.init();
+}
+else {
+  module.exports = new SenseSearch();
+}
+
+function logError(err){
+  console.log(err);
+}

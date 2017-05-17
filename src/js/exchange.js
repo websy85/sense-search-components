@@ -101,7 +101,7 @@ var Exchange = (function(){
           else{
             callbackFn.call(null, response);
           }
-        });
+        }, logError);
       }
     },
     askCapabilityAPI:{
@@ -115,7 +115,7 @@ var Exchange = (function(){
           else{
             callbackFn.call(null, response);
           }
-        });
+        }, logError);
       }
     },
     askEnigma:{
@@ -129,7 +129,7 @@ var Exchange = (function(){
           else{
             callbackFn.call(null, response);
           }
-        });
+        }, logError);
       }
     },
     getLayout:{
@@ -141,3 +141,7 @@ var Exchange = (function(){
 
   return Exchange;
 }());
+
+function logError(err){
+  console.log(err);
+}
