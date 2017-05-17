@@ -69,7 +69,7 @@ var SenseSearchResult = (function(){
                 if(typeof(callbackFn)==="function"){
                   callbackFn.call(null);
                 }
-              });
+              }, logError);
             }
             else {
               senseSearch.exchange.ask(senseSearch.appHandle, "CreateSessionObject", [hDef], function(response){
@@ -463,3 +463,7 @@ var SenseSearchResult = (function(){
 
   return SenseSearchResult;
 }());
+
+function logError(err){
+  console.log(err);
+}
