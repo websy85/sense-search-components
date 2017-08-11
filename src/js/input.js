@@ -337,7 +337,10 @@ var SenseSearchInput = (function(){
           "piechart": "piechart",
           "table": "table",
           "treemap": "treemap",
-          "scatter": "scatterplot"
+          "scatter": "scatterplot",
+          "boxplot": "boxplot",
+          "distributionplot": "distributionplot",
+          "histogram": "histogram"
         },
         cardinalityLimit: 1000
       }
@@ -1388,8 +1391,13 @@ var SenseSearchInput = (function(){
         if(measureCount==0){
           //we need a measure for something to render
           for(var t=0;t<this.nlpTerms.length;t++){
+            if(this.nlpTerms[t].senseType=="viz"){
+              chartType = this.nlpTerms[t].senseInfo.viz;
+            }
+          }
+          for(var t=0;t<this.nlpTerms.length;t++){
             if(measureCount==0){
-              if(this.nlpTerms[t].senseType == "dim"){
+              if(this.nlpTerms[t].senseType == "dim" && chartType!="histogram"){
                 if(senseSearch.appFieldsByTag.$possibleMeasure && senseSearch.appFieldsByTag.$possibleMeasure[this.nlpTerms[t].parsedText]){
                   this.nlpTerms[t].senseType = "exp";
                   measureCount++;
@@ -1462,9 +1470,6 @@ var SenseSearchInput = (function(){
               break;
             case "function":
               func = this.nlpTerms[t].senseInfo.func;
-              break;
-            case "viz":
-              chartType = this.nlpTerms[t].senseInfo.viz;
               break;
             case "value":
               var fieldName, normalizedName;

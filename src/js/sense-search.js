@@ -114,7 +114,7 @@ var SenseSearch = (function(){
     },
     connectWithCapabilityAPI: {
       value:  function(app){
-        this.appHandle = app.global.session.connectedAppHandle;
+        this.appHandle = app.global.session.connectedAppHandle || app.model.handle;
         this.exchange = new Exchange(app, "CapabilityAPI");
         this.ready.deliver();
 
@@ -291,6 +291,9 @@ var SenseSearch = (function(){
           var fieldArray = [], defOptions = def;
           defOptions.wsId = that.pendingChart;
           if(def.qInfo.qType=="kpi"){
+            defOptions.color = {
+        			useBaseColors: "measure"
+        		};
             defOptions.qHyperCubeDef.qMeasures[0].qDef.measureAxis = {
               min: 0,
               max: 100
@@ -298,10 +301,15 @@ var SenseSearch = (function(){
             defOptions.qHyperCubeDef.qMeasures[0].qDef.conditionalColoring = {
               useConditionalColoring: false,
               singleColor: 3,
+              paletteSingleColor: {
+  							index: 6
+  						},
               segments: {
-                colors: {color:3},
-                limits: []
-              }
+  							limits: [],
+  							paletteColors: [{
+  								index: 6
+  							}]
+  						}
             };
             defOptions.fontSize = "S";
           }
