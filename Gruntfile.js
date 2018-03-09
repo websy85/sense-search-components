@@ -62,11 +62,20 @@ module.exports = function(grunt) {
           }
         ]
       }
-    }
+    },
+    express: {
+			prod: {
+				options: {
+          port: 3000,
+					script: "index.js"
+				}
+			}
+		}
   });
   grunt.loadNpmTasks('grunt-contrib-less');
   grunt.loadNpmTasks('grunt-includes');
   grunt.loadNpmTasks('grunt-contrib-watch');
   grunt.loadNpmTasks('grunt-contrib-uglify');
-  grunt.registerTask('default', ['includes','uglify','less','watch']);
+  grunt.loadNpmTasks('grunt-express-server');
+  grunt.registerTask('default', ['includes','uglify','less','express','watch']);
 };

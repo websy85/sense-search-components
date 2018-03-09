@@ -1,3 +1,4 @@
+include "./speech.js"
 include "./input.js"
 include "./results.js"
 include "./subscription.js"
@@ -18,15 +19,21 @@ var SenseSearch = (function(){
         //see if there are any elements that need rendering
         var inputs = document.getElementsByTagName('sense-search-input');
         for (var i = 0; i < inputs.length;) {
-            var id = inputs[i].id;
-            var input = new SenseSearchInput(id);
-            this.inputs[id] = input.object;
+            // var id = inputs[i].id;
+            // var input = new SenseSearchInput(id);
+            // this.inputs[id] = input.object;
+            this.inputs[inputs[i].id] = (new SenseSearchInput(inputs[i].id)).object
+        }
+        var speech = document.getElementsByTagName('sense-search-speech');
+        for (var i = 0; i < speech.length;) {
+            this.speech[speech[i].id] = (new SenseSearchSpeech(speech[i].id)).object
         }
         var results = document.getElementsByTagName('sense-search-results');
         for (var i = 0; i < results.length;) {
-            var id = results[i].id;
-            var result = new SenseSearchResult(id);
-            this.results[id] = result.object;
+            // var id = results[i].id;
+            // var result = new SenseSearchResult(id);
+            // this.results[id] = result.object;
+            this.results[results[i].id] = (new SenseSearchResult(results[i].id)).object
         }
       }
     },
@@ -63,6 +70,10 @@ var SenseSearch = (function(){
       value: []
     },
     inputs: {
+      writable: true,
+      value: {}
+    },
+    speech: {
       writable: true,
       value: {}
     },

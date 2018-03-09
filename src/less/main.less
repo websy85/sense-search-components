@@ -1,5 +1,6 @@
 @import "./colours.less";
 @import "./input.less";
+@import "./speech.less";
 @import "./results.less";
 
 @-webkit-keyframes spin {
@@ -7,9 +8,18 @@
   50% {-webkit-transform: rotate(180deg);}
   100% {-webkit-transform: rotate(360deg);}
 }
-
 @keyframes spin {
   0% {transform: rotate(0deg);}
   50% {transform: rotate(180deg);}
   100% {transform: rotate(360deg);}
+}
+@-webkit-keyframes inverted-pulse {
+  0% {transform: scale(1); opacity: 1;}
+  50% {transform: scale(0.6); opacity: 0.6;}
+  100% {transform: scale(1); opacity: 1;}
+}
+@keyframes inverted-pulse {
+  0% {transform: scale(1); opacity: 1;}
+  50% {transform: scale(0.6); opacity: 0.6;}
+  100% {transform: scale(1); opacity: 1;}
 }

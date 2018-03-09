@@ -108,21 +108,44 @@ var Exchange = (function(){
       value: function(handle, method, args, callbackFn){
         var that = this;
         var conn
-        if(this.connection.__enigmaSession && this.connection.__enigmaSession.rpc){
-          conn = this.connection.__enigmaSession.rpc.send
-        }
-        else {
-          conn = this.connection.rpc
-        }
-        conn({handle: handle, method: method, params:args }).then(function(response){
-          that.seqId = response.id;
-          if(response.error){
+        // if(this.connection.__enigmaSession && this.connection.__enigmaSession.rpc){
+        //   conn = this.connection.__enigmaSession.rpc.send
+        // }
+        // else {
+        //   conn = this.connection.rpc
+        // }
+        // conn({handle: handle, method: method, params:args }).then(function(response){
+        //   that.seqId = response.id;
+        //   if(response.error){
+        //
+        //   }
+        //   else{
+        //     callbackFn.call(null, response);
+        //   }
+        // }, logError);
+        try{
+          this.connection.__enigmaSession.rpc.send({handle: handle, method: method, params:args }).then(function(response){
+            that.seqId = response.id;
+            if(response.error){
 
-          }
-          else{
-            callbackFn.call(null, response);
-          }
-        }, logError);
+            }
+            else{
+              callbackFn.call(null, response);
+            }
+          }, logError);
+        }
+        catch(ex){
+          console.log(ex);
+          this.connection.rpc({handle: handle, method: method, params:args }).then(function(response){
+            that.seqId = response.id;
+            if(response.error){
+
+            }
+            else{
+              callbackFn.call(null, response);
+            }
+          }, logError);
+        }
       }
     },
     askEnigma:{

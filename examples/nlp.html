@@ -20,15 +20,17 @@
     <p>
       <strong>NOTE:</strong> This is a work in progress, glitches may occur.
     </p>
+    <sense-search-speech id="mySpeech"></sense-search-speech>
     <sense-search-input id="myInput" mode="visualizations"></sense-search-input>
     <sense-search-results id="myResults"></sense-search-results>
     <script type="text/javascript" src="https://branch.qlik.com/anon/resources/assets/external/requirejs/require.js"></script>
-    <script type="text/javascript" src="sense-search.min.js"></script>
+    <script type="text/javascript" src="./sense-search.min.js"></script>
     <script type="text/javascript">
 
       var config = {
         host: "branch.qlik.com",
         prefix: "/anon/",
+        port: 443,
         isSecure: true,
         app: "26aff8a0-e8c6-41a8-b8ee-0096ac03b590"
       };
@@ -45,8 +47,8 @@
         var app = qlik.openApp(config.app, config);
         app.model.waitForOpen.promise.then(function(){
            senseSearch.connectWithCapabilityAPI(app);
-           
-           var inputOptions = {          
+
+           var inputOptions = {
             "searchFields": ["title","username","tags","category","product","short_description"],
             "suggestFields": ["title","username","tags","category","product","short_description"]
           }

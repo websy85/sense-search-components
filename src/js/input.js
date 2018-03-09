@@ -89,6 +89,8 @@ var SenseSearchInput = (function(){
     senseSearch.fieldsFetched.subscribe(this.fieldsFetched.bind(this));
     senseSearch.onSelectionsApplied.subscribe(this.refresh.bind(this));
     senseSearch.onLockedUnlocked.subscribe(this.refresh.bind(this));
+    senseSearch.searchAssociations.subscribe(this.onSearchAssociations.bind(this));
+    senseSearch.suggestResults.subscribe(this.onSuggestResults.bind(this));
     senseSearch.cleared.subscribe(this.onClear.bind(this));
     return {element: element, object: this};
   }
@@ -131,8 +133,8 @@ var SenseSearchInput = (function(){
           this.activateInput();
         }
         if(senseSearch && senseSearch.exchange.connection){
-          senseSearch.searchAssociations.subscribe(this.onSearchAssociations.bind(this));
-          senseSearch.suggestResults.subscribe(this.onSuggestResults.bind(this));
+          // senseSearch.searchAssociations.subscribe(this.onSearchAssociations.bind(this));
+          // senseSearch.suggestResults.subscribe(this.onSuggestResults.bind(this));
           if(!senseSearch.inputs[this.id]){
             senseSearch.inputs[this.id] = this;
           }
@@ -453,7 +455,7 @@ var SenseSearchInput = (function(){
         }
         else{
           console.log('ambiguities');
-          // console.log(this.associations);
+          console.log(this.associations);
           var terms = this.getTermByText(this.associations.qSearchTerms[this.associations.qSearchTerms.length-1]);
           var termIndexes = this.getTermIndexByText(this.associations.qSearchTerms[this.associations.qSearchTerms.length-1]);
           if(!terms || terms.length===0){
@@ -476,14 +478,47 @@ var SenseSearchInput = (function(){
               }
             }
             else if(this.associations.qFieldNames.length==1){
-              terms[t].queryTag = this.associations.qFieldNames[0];
-              terms[t].senseTag = "value";
-              terms[t].senseType = "value";
-              terms[t].senseInfo = {
-                field: senseSearch.appFields[normalizeText(this.associations.qFieldNames[0])],
-                fieldSelection: "="
-              };
-              var cti = termIndexes[t];
+              var tempTermTexts = terms[t].text.split(" ")
+              var tempTerms = []
+              var cti
+              if (this.associations.qSearchTermsMatched[0][0].qFieldMatches[0].qTerms[0] < this.associations.qSearchTerms.length-1){
+                var textMatched = this.associations.qSearchTerms[this.associations.qSearchTermsMatched[0][0].qFieldMatches[0].qTerms[0]]
+                var oldTerm = terms.splice(t, 1)[0]
+                for (var tt = tempTermTexts.length-1; tt > -1; tt--) {
+                  var temp = cloneObject(oldTerm)
+                  temp.text = tempTermTexts[tt]
+                  temp.name = parseText(temp.text)
+                  temp.parsedText = parseText(temp.text)
+                  temp.length = temp.name.length
+                  if (temp.text == textMatched){
+                    cti = t+tt
+                    console.log(cti);
+                    temp.queryTag = this.associations.qFieldNames[0];
+                    temp.senseTag = "value";
+                    temp.senseType = "value";
+                    temp.senseInfo = {
+                      field: senseSearch.appFields[normalizeText(this.associations.qFieldNames[0])],
+                      fieldSelection: "="
+                    };
+                  }
+                  terms.splice(t, 0, temp)
+                }
+                console.log('aksjdh');
+                console.log(terms);
+                this.nlpTerms = terms
+                console.log(this.nlpTerms);
+              }
+              else {
+                terms[t].queryTag = this.associations.qFieldNames[0];
+                terms[t].senseTag = "value";
+                terms[t].senseType = "value";
+                terms[t].senseInfo = {
+                  field: senseSearch.appFields[normalizeText(this.associations.qFieldNames[0])],
+                  fieldSelection: "="
+                };
+                cti = termIndexes[t];
+              }
+
               if(this.nlpTerms[cti-1] && this.nlpTerms[cti-1].text && this.nlpModel.negationMap.indexOf(this.nlpTerms[cti-1].text.toLowerCase())!==-1){
                 terms[t].senseInfo.fieldSelection = "-="
               }
@@ -1815,6 +1850,12 @@ var SenseSearchInput = (function(){
     var re = new RegExp(suggestBase, "i")
     return suggestion.replace(re,"");
   }
-
+  function cloneObject(inObj){
+    var outObj = {}
+    for(var key in inObj){
+      outObj[key] = inObj[key]
+    }
+    return outObj
+  }
   return SenseSearchInput;
 }());
