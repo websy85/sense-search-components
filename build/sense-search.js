@@ -231,6 +231,10 @@ var SenseSearchInput = (function(){
       writable: true,
       value: []
     },
+    nlpSilentTerms:{
+      writable: true,
+      value: {}
+    },
     nlpResolvedTerms:{
       writable: true,
       value: {}
@@ -297,7 +301,8 @@ var SenseSearchInput = (function(){
           "of",
           "a",
           "and",
-          "what"
+          "what",
+          "show"
         ],
         comparatives:{
           "more": ">",
@@ -453,7 +458,7 @@ var SenseSearchInput = (function(){
           var termIndexes = this.getTermIndexByText(this.associations.qSearchTerms[this.associations.qSearchTerms.length-1]);
           if(!terms || terms.length===0){
             if(this.blockingTermKeys.length==0){
-              // this.nlpViz();
+              this.nlpViz();
             }
             return;
           }
@@ -620,6 +625,9 @@ var SenseSearchInput = (function(){
               }
             };
             if(senseSearch.appFieldsByTag.$time && senseSearch.appFieldsByTag.$time[f]){
+              newTerm.senseInfo.type = "time";
+            }
+            else if(senseSearch.appFieldsByTag.$timestamp && senseSearch.appFieldsByTag.$timestamp[f]){
               newTerm.senseInfo.type = "time";
             }
             else if(this.nlpModel.fieldTagMap[normalizeText(fieldName)] && this.nlpModel.fieldTagMap[normalizeText(fieldName)].indexOf("$time")!==-1){
@@ -1359,6 +1367,13 @@ var SenseSearchInput = (function(){
         var dimensionCount=0,measureCount=0;
         var columnWidths = [];
         var chartType;
+        // process any silent terms
+        if(!this.nlpSilentTerms){
+          this.nlpSilentTerms = {}
+        }
+        if(this.nlpSilentTerms && this.nlpSilentTerms.viz){
+          chartType = this.nlpModel.vizTypeMap[this.nlpSilentTerms.viz]
+        }
         //first check to see if any of our dims should be treated as measures based on functions
         for(var t=0;t<this.nlpTerms.length;t++){
           if(this.nlpTerms[t].senseType == "exp"){
@@ -1387,14 +1402,13 @@ var SenseSearchInput = (function(){
             }
           }
         }
-
+        for(var t=0;t<this.nlpTerms.length;t++){
+          if(this.nlpTerms[t].senseType=="viz"){
+            chartType = this.nlpTerms[t].senseInfo.viz;
+          }
+        }
         if(measureCount==0){
           //we need a measure for something to render
-          for(var t=0;t<this.nlpTerms.length;t++){
-            if(this.nlpTerms[t].senseType=="viz"){
-              chartType = this.nlpTerms[t].senseInfo.viz;
-            }
-          }
           for(var t=0;t<this.nlpTerms.length;t++){
             if(measureCount==0){
               if(this.nlpTerms[t].senseType == "dim" && chartType!="histogram"){
@@ -1504,6 +1518,9 @@ var SenseSearchInput = (function(){
               break;
             case "sortorder":
               ambiguousSort = this.nlpTerms[t].senseInfo.order;
+              break;
+            case "viz":
+              chartType = this.nlpModel.vizTypeMap[this.nlpTerms[t].senseInfo.viz]
               break;
             default:
 
@@ -1622,7 +1639,8 @@ var SenseSearchInput = (function(){
             hDef.qHyperCubeDef.qDimensions[dimIndex].qDef.qSortCriterias = [{
               qSortByNumeric: ambiguousSort || 1
             }];
-            hDef.qHyperCubeDef.qInterColumnSortOrder = [fields.indexOf(time[0])];
+            // hDef.qHyperCubeDef.qInterColumnSortOrder = [fields.indexOf(time[0])];
+            hDef.qHyperCubeDef.qInterColumnSortOrder = [0]
           }
           else{ //we sort by the first measure desc
             if(hDef.qHyperCubeDef.qMeasures.length>0){
@@ -2512,7 +2530,14 @@ var SenseSearch = (function(){
       askCapabilityAPI:{
         value: function(handle, method, args, callbackFn){
           var that = this;
-          this.connection.rpc({handle: handle, method: method, params:args }).then(function(response){
+          var conn
+          if(this.connection.__enigmaSession && this.connection.__enigmaSession.rpc){
+            conn = this.connection.__enigmaSession.rpc.send
+          }
+          else {
+            conn = this.connection.rpc
+          }
+          conn({handle: handle, method: method, params:args }).then(function(response){
             that.seqId = response.id;
             if(response.error){
 
@@ -2834,6 +2859,8 @@ var SenseSearch = (function(){
         if(this.exchange.connectionType=="CapabilityAPI"){
           var fieldArray = [], defOptions = def;
           defOptions.wsId = that.pendingChart;
+          var hCubePath = "/qHyperCubeDef";
+          var hCubeDef = defOptions.qHyperCubeDef;
           if(def.qInfo.qType=="kpi"){
             defOptions.color = {
         			useBaseColors: "measure"
@@ -2857,10 +2884,69 @@ var SenseSearch = (function(){
             };
             defOptions.fontSize = "S";
           }
+          if(def.qInfo.qType=="boxplot"){
+            hCubePath = "/boxplotDef/qHyperCubeDef";
+            defOptions.boxplotDef = {qHyperCubeDef: defOptions.qHyperCubeDef};
+            defOptions.boxplotDef.qHyperCubeDef.calculations = {
+  						auto: true,
+  						mode: "tukey",
+  						parameters: {
+  							tukey: 1.5,
+  							fractiles: 0.01,
+  							stdDev: 3
+  						}
+  					}
+            defOptions.boxplotDef.qHyperCubeDef.elements = {
+  						"firstWhisker": {
+  							"name": "",
+  							"expression": null
+  						},
+  						"boxStart": {
+  							"name": "",
+  							"expression": null
+  						},
+  						"boxMiddle": {
+  							"name": "",
+  							"expression": null
+  						},
+  						"boxEnd": {
+  							"name": "",
+  							"expression": null
+  						},
+  						"lastWhisker": {
+  							"name": "",
+  							"expression": null
+  						},
+  						"outliers": {
+  							"include": true
+  						}
+  					}
+            defOptions.boxplotDef.qHyperCubeDef.presentation = {
+  						whiskers: {
+  							show: true
+  						}
+  					}
+            defOptions.boxplotDef.qHyperCubeDef.color = {
+  						box: {
+  							paletteColor: {
+  								index: -1,
+  								color: "#E6E6E6"
+  							}
+  						},
+  						point: {
+  							paletteColor: {
+  								index: 6,
+  								color: "#4477aa"
+  							}
+  						}
+  					}
+            delete defOptions.qHyperCubeDef;
+            hCubeDef = defOptions.boxplotDef.qHyperCubeDef;
+          }
           this.exchange.app.visualization.create(def.qInfo.qType, fieldArray, defOptions).then(function(chart){
             // console.log(chart);
             // if(chart.model.layout.wsId == that.pendingChart){  //doesn't work in 2.2
-              that.exchange.ask(chart.model.handle, "ApplyPatches", [[{qPath:"/qHyperCubeDef", qOp:"replace", qValue: JSON.stringify(defOptions.qHyperCubeDef)}], true], function(result){
+              that.exchange.ask(chart.model.handle, "ApplyPatches", [[{qPath:hCubePath, qOp:"replace", qValue: JSON.stringify(hCubeDef)}], true], function(result){
                 chart.model.getLayout().then(function(){
                   that.chartResults.deliver(chart);
                 });

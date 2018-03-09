@@ -107,7 +107,14 @@ var Exchange = (function(){
     askCapabilityAPI:{
       value: function(handle, method, args, callbackFn){
         var that = this;
-        this.connection.rpc({handle: handle, method: method, params:args }).then(function(response){
+        var conn
+        if(this.connection.__enigmaSession && this.connection.__enigmaSession.rpc){
+          conn = this.connection.__enigmaSession.rpc.send
+        }
+        else {
+          conn = this.connection.rpc
+        }
+        conn({handle: handle, method: method, params:args }).then(function(response){
           that.seqId = response.id;
           if(response.error){
 

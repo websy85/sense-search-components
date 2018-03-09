@@ -290,6 +290,8 @@ var SenseSearch = (function(){
         if(this.exchange.connectionType=="CapabilityAPI"){
           var fieldArray = [], defOptions = def;
           defOptions.wsId = that.pendingChart;
+          var hCubePath = "/qHyperCubeDef";
+          var hCubeDef = defOptions.qHyperCubeDef;
           if(def.qInfo.qType=="kpi"){
             defOptions.color = {
         			useBaseColors: "measure"
@@ -313,10 +315,69 @@ var SenseSearch = (function(){
             };
             defOptions.fontSize = "S";
           }
+          if(def.qInfo.qType=="boxplot"){
+            hCubePath = "/boxplotDef/qHyperCubeDef";
+            defOptions.boxplotDef = {qHyperCubeDef: defOptions.qHyperCubeDef};
+            defOptions.boxplotDef.qHyperCubeDef.calculations = {
+  						auto: true,
+  						mode: "tukey",
+  						parameters: {
+  							tukey: 1.5,
+  							fractiles: 0.01,
+  							stdDev: 3
+  						}
+  					}
+            defOptions.boxplotDef.qHyperCubeDef.elements = {
+  						"firstWhisker": {
+  							"name": "",
+  							"expression": null
+  						},
+  						"boxStart": {
+  							"name": "",
+  							"expression": null
+  						},
+  						"boxMiddle": {
+  							"name": "",
+  							"expression": null
+  						},
+  						"boxEnd": {
+  							"name": "",
+  							"expression": null
+  						},
+  						"lastWhisker": {
+  							"name": "",
+  							"expression": null
+  						},
+  						"outliers": {
+  							"include": true
+  						}
+  					}
+            defOptions.boxplotDef.qHyperCubeDef.presentation = {
+  						whiskers: {
+  							show: true
+  						}
+  					}
+            defOptions.boxplotDef.qHyperCubeDef.color = {
+  						box: {
+  							paletteColor: {
+  								index: -1,
+  								color: "#E6E6E6"
+  							}
+  						},
+  						point: {
+  							paletteColor: {
+  								index: 6,
+  								color: "#4477aa"
+  							}
+  						}
+  					}
+            delete defOptions.qHyperCubeDef;
+            hCubeDef = defOptions.boxplotDef.qHyperCubeDef;
+          }
           this.exchange.app.visualization.create(def.qInfo.qType, fieldArray, defOptions).then(function(chart){
             // console.log(chart);
             // if(chart.model.layout.wsId == that.pendingChart){  //doesn't work in 2.2
-              that.exchange.ask(chart.model.handle, "ApplyPatches", [[{qPath:"/qHyperCubeDef", qOp:"replace", qValue: JSON.stringify(defOptions.qHyperCubeDef)}], true], function(result){
+              that.exchange.ask(chart.model.handle, "ApplyPatches", [[{qPath:hCubePath, qOp:"replace", qValue: JSON.stringify(hCubeDef)}], true], function(result){
                 chart.model.getLayout().then(function(){
                   that.chartResults.deliver(chart);
                 });
