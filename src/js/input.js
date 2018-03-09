@@ -118,6 +118,14 @@ var SenseSearchInput = (function(){
     blockingTermKeys: {
       writable: true
     },
+    includeMasterMeasures: {
+      writable: true,
+      value: false
+    },
+    usingMasterMeasures: {
+      writable: true,
+      value: false
+    },
     attach:{
       value: function(options){
         if(options){
@@ -127,7 +135,7 @@ var SenseSearchInput = (function(){
         }
         if(this.mode=="visualizations"){
           //get the field list
-          senseSearch.getAppFields(this.nlpModel.cardinalityLimit);
+          senseSearch.getAppFields(this.nlpModel.cardinalityLimit, this.includeMasterMeasures);
         }
         else{
           this.activateInput();
@@ -437,6 +445,7 @@ var SenseSearchInput = (function(){
         this.nlpTermsPositions = [];
         this.currentTerm = null;
         this.lastSelectedGroup = null;
+        this.usingMasterMeasures = false;
         this.hideSuggestions();
         this.hideAssociations();
         this.clearLozenges();
@@ -603,6 +612,7 @@ var SenseSearchInput = (function(){
             fieldName = senseSearch.appFields[f].qData.title;
             if(senseSearch.appFields[f].qInfo.qType==="measure"){
               fieldType = "exp";
+              this.usingMasterMeasures = true;
             }
             else{
               fieldType = "dim";
@@ -610,6 +620,9 @@ var SenseSearchInput = (function(){
           }
           else{
             fieldName = senseSearch.appFields[f].qName;
+            if(senseSearch.appFields[f].isMasterItem){
+              this.usingMasterMeasures = true
+            }
             if(senseSearch.appFieldsByTag.$measure && senseSearch.appFieldsByTag.$measure[f]){
               fieldType = "exp";
             }
@@ -1589,8 +1602,9 @@ var SenseSearchInput = (function(){
         }
         for(var m in measures){
           var mDef = {};
-          if(measures[m].qLibraryId){
-            mDef.qDef = measures[m];
+          if(measures[m].field.qInfo && measures[m].field.qInfo.qId){
+            // mDef.qDef = { qLibraryId: measures[m].field.qInfo.qId }
+            mDef.qLibraryId = measures[m].field.qInfo.qId 
           }
           else{
             var measDef = "=num(";

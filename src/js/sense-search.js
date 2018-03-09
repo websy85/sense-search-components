@@ -307,6 +307,9 @@ var SenseSearch = (function(){
             defOptions.color = {
         			useBaseColors: "measure"
         		};
+            if (defOptions.qHyperCubeDef.qMeasures[0] && !defOptions.qHyperCubeDef.qMeasures[0].qDef){
+              defOptions.qHyperCubeDef.qMeasures[0].qDef = {}
+            }
             defOptions.qHyperCubeDef.qMeasures[0].qDef.measureAxis = {
               min: 0,
               max: 100
@@ -427,9 +430,12 @@ var SenseSearch = (function(){
       }
     },
     getAppFields:{
-      value: function(cardinalityLimit){
+      value: function(cardinalityLimit, includeMeasures){
         var that = this;
         var CALL_COUNT = 2;
+        if(includeMeasures){
+          CALL_COUNT++
+        }
         var responseData = {
           fields: null,
           dimensions: null,
@@ -459,18 +465,18 @@ var SenseSearch = (function(){
           });
         });
         //get app measures
-        //disabled for now - why? - because library measures are pre defined and most of our logic is designed to build up an expression with set analysis
-        // that.exchange.ask(that.appHandle, "CreateSessionObject", [{ qInfo: { qType: "MeasureList" }, qMeasureListDef: { qType: "measure", qData: {title: "/qMetaDef/title", tags: "/qMetaDef/tags"} } }], function(response){
-        //   var handle = response.result.qReturn.qHandle;
-        //   that.exchange.ask(handle, "GetLayout", [], function(response){
-        //     responseData.measures = response.result.qLayout.qMeasureList.qItems;
-        //     responseData.setCount++;
-        //     if(responseData.setCount===3){
-        //       that.sortFieldsByTag(responseData);
-        //     }
-        //   });
-        // });
-        responseData.measures = [];
+        if(includeMeasures){
+          that.exchange.ask(that.appHandle, "CreateSessionObject", [{ qInfo: { qType: "MeasureList" }, qMeasureListDef: { qType: "measure", qData: {title: "/qMetaDef/title", tags: "/qMetaDef/tags"} } }], function(response){
+            var handle = response.result.qReturn.qHandle;
+            that.exchange.ask(handle, "GetLayout", [], function(response){
+              responseData.measures = response.result.qLayout.qMeasureList.qItems;
+              responseData.setCount++;
+              if(responseData.setCount===CALL_COUNT){
+                that.sortFieldsByTag(responseData, cardinalityLimit);
+              }
+            });
+          });
+        }
       }
     },
     sortFieldsByTag:{
@@ -527,6 +533,7 @@ var SenseSearch = (function(){
         for (var i=0;i<fieldData.measures.length;i++){
           var fieldName = fieldData.measures[i].qData.title.toLowerCase().replace(/ /gi, "_");
           this.appFields[fieldName] = fieldData.measures[i];
+          this.appFields[fieldName].isMasterItem = true
           if(!this.appFieldsByTag.$measure){
             this.appFieldsByTag.$measure = {};
           }

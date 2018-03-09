@@ -48,9 +48,9 @@ module.exports = function(grunt) {
     },
     uglify:{
       options : {
-        beautify : false,
-        mangle   : true,
-        compress : true
+        beautify : true,
+        mangle   : false,
+        compress : false
       },
       build: {
         files: [
@@ -66,7 +66,7 @@ module.exports = function(grunt) {
     express: {
 			prod: {
 				options: {
-          port: 3000,
+          port: 4000,
 					script: "index.js"
 				}
 			}
