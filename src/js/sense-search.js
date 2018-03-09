@@ -530,27 +530,29 @@ var SenseSearch = (function(){
           }
         }
         //organise the measures
-        for (var i=0;i<fieldData.measures.length;i++){
-          var fieldName = fieldData.measures[i].qData.title.toLowerCase().replace(/ /gi, "_");
-          this.appFields[fieldName] = fieldData.measures[i];
-          this.appFields[fieldName].isMasterItem = true
-          if(!this.appFieldsByTag.$measure){
-            this.appFieldsByTag.$measure = {};
-          }
-          this.appFieldsByTag.$measure[fieldName] = {
-            fieldName: fieldData.measures[i].qData.title
-          };
-          for (var t=0;t<fieldData.measures[i].qMeta.tags.length;t++){
-            var tag = fieldData.measures[i].qMeta.tags[t];
-            if(tag.indexOf("$")==-1){
-              tag = "$"+tag;
+        if(fieldData.measures && Array.isArray(fieldData.measures)){
+          for (var i=0;i<fieldData.measures.length;i++){
+            var fieldName = fieldData.measures[i].qData.title.toLowerCase().replace(/ /gi, "_");
+            this.appFields[fieldName] = fieldData.measures[i];
+            this.appFields[fieldName].isMasterItem = true
+            if(!this.appFieldsByTag.$measure){
+              this.appFieldsByTag.$measure = {};
             }
-            if(!this.appFieldsByTag[tag]){
-              this.appFieldsByTag[tag] = {};
-            }
-            this.appFieldsByTag[tag][fieldName] = {
+            this.appFieldsByTag.$measure[fieldName] = {
               fieldName: fieldData.measures[i].qData.title
             };
+            for (var t=0;t<fieldData.measures[i].qMeta.tags.length;t++){
+              var tag = fieldData.measures[i].qMeta.tags[t];
+              if(tag.indexOf("$")==-1){
+                tag = "$"+tag;
+              }
+              if(!this.appFieldsByTag[tag]){
+                this.appFieldsByTag[tag] = {};
+              }
+              this.appFieldsByTag[tag][fieldName] = {
+                fieldName: fieldData.measures[i].qData.title
+              };
+            }
           }
         }
         // console.log(this.appFieldsByTag);
