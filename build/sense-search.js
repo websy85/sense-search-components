@@ -458,7 +458,7 @@ var SenseSearchInput = (function(){
     },
     MAX_SEARCH_TERMS:{
       writable: true,
-      value: 10
+      value: 20
     },
     ready:{
       writable: true,
@@ -481,6 +481,14 @@ var SenseSearchInput = (function(){
     usingMasterMeasures: {
       writable: true,
       value: false
+    },
+    showTimeSeriesAsLine: {
+      writable: true,
+      value: true
+    },
+    groupingStyle: {
+      writable: true,
+      value: "stacked"
     },
     attach:{
       value: function(options){
@@ -706,6 +714,7 @@ var SenseSearchInput = (function(){
           "bar chart": "barchart",
           "linechart": "linechart",
           "piechart": "piechart",
+          "combochart": "combochart",
           "table": "table",
           "treemap": "treemap",
           "scatter": "scatterplot",
@@ -1783,34 +1792,42 @@ var SenseSearchInput = (function(){
           if(this.nlpTerms[t].senseType == "exp"){
             measureCount++;
           }
-          if(this.nlpTerms[t].senseType == "dim"){
-            if(this.nlpTerms[t-1]){
-              if(this.nlpModel.distinctMap[this.nlpTerms[t-1].text]){
+          if(this.nlpTerms[t].senseInfo && this.nlpTerms[t].senseInfo.field && this.nlpTerms[t].senseInfo.field.qInfo && this.nlpTerms[t].senseInfo.field.qInfo.qId){
+          }
+          else {
+            if(this.nlpTerms[t].senseType == "dim"){
+              if(this.nlpTerms[t-1]){
                 this.nlpTerms[t].senseType = "exp";
-                this.nlpTerms[t].senseInfo.countDistinct = true;
-                this.nlpTerms[t].senseInfo.func = "count";
-                measureCount++;
+                if(this.nlpModel.distinctMap[this.nlpTerms[t-1].text]){
+                  this.nlpTerms[t].senseInfo.countDistinct = true;
+                  this.nlpTerms[t].senseInfo.func = "count";
+                  measureCount++;
+                }
+                else if (this.nlpTerms[t-1].senseType=="function") {
+                  this.nlpTerms[t].senseInfo.func = this.nlpTerms[t-1].senseInfo.func;
+                  measureCount++;
+                }
               }
-              else if (this.nlpTerms[t-1].senseType=="function") {
+              else if (this.nlpTerms[t+1]) {
                 this.nlpTerms[t].senseType = "exp";
-                this.nlpTerms[t].senseInfo.func = this.nlpTerms[t-1].senseInfo.func;
-                measureCount++;
-              }
-            }
-            else if (this.nlpTerms[t+1]) {
-              if (this.nlpTerms[t+1].senseType=="function") {
-                this.nlpTerms[t].senseType = "exp";
-                this.nlpTerms[t].senseInfo.func = this.nlpTerms[t+1].senseInfo.func;
-                measureCount++;
+                if(this.nlpModel.distinctMap[this.nlpTerms[t+1].text]){
+                  this.nlpTerms[t].senseInfo.countDistinct = true;
+                  this.nlpTerms[t].senseInfo.func = "count";
+                  measureCount++;
+                }
+                else if (this.nlpTerms[t+1].senseType=="function") {
+                  this.nlpTerms[t].senseInfo.func = this.nlpTerms[t+1].senseInfo.func;
+                  measureCount++;
+                }
               }
             }
           }
         }
-        for(var t=0;t<this.nlpTerms.length;t++){
-          if(this.nlpTerms[t].senseType=="viz"){
-            chartType = this.nlpTerms[t].senseInfo.viz;
-          }
-        }
+        // for(var t=0;t<this.nlpTerms.length;t++){
+        //   if(this.nlpTerms[t].senseType=="viz"){
+        //     chartType = this.nlpTerms[t].senseInfo.viz;
+        //   }
+        // }
         if(measureCount==0){
           //we need a measure for something to render
           for(var t=0;t<this.nlpTerms.length;t++){
@@ -1879,9 +1896,13 @@ var SenseSearchInput = (function(){
               else {
                 dimensionName = this.nlpTerms[t].senseInfo.field.qName.replace(/ /gi,"-");
                 dimensions[dimensionName] = this.nlpTerms[t].senseInfo.field;
-                if(this.nlpTerms[t].senseInfo.type=="time"){
-                  time.push(dimensionName);
-                }
+              }
+              if(!dimensions[dimensionName].qDef){
+                dimensions[dimensionName].qDef = {}
+              }
+              dimensions[dimensionName].qDef.qSortCriterias = [{ qSortByAscii: 1}]  // for now we'll apply default sorting to the dimensions
+              if(this.nlpTerms[t].senseInfo.type=="time"){
+                time.push(dimensionName);
               }
               dimensionCount++;
               dimensionIndexMap[dimensionName]=dimensionCount;
@@ -1935,6 +1956,7 @@ var SenseSearchInput = (function(){
           var dDef = {};
           if(dimensions[d].qLibraryId){
             dDef = dimensions[d];
+            dDef.qNullSuppression = true
           }
           else{
             dDef = {
@@ -1960,7 +1982,7 @@ var SenseSearchInput = (function(){
           var mDef = {};
           if(measures[m].field.qInfo && measures[m].field.qInfo.qId){
             // mDef.qDef = { qLibraryId: measures[m].field.qInfo.qId }
-            mDef.qLibraryId = measures[m].field.qInfo.qId 
+            mDef.qLibraryId = measures[m].field.qInfo.qId
           }
           else{
             var measDef = "=num(";
@@ -2038,17 +2060,26 @@ var SenseSearchInput = (function(){
         for(var s in sorting){
           sortCount++;
         }
+        var totalCols = hDef.qHyperCubeDef.qDimensions.length + hDef.qHyperCubeDef.qMeasures.length;
         if(sortCount==0 && hDef.qHyperCubeDef.qDimensions && hDef.qHyperCubeDef.qDimensions.length>0){ //no sorting has been applied
           if(time.length>0){  //we have a time dimension to sort by (asc)
             var dimIndex = dimensionIndexMap[time[0]];
+            if(!hDef.qHyperCubeDef.qDimensions[dimIndex].qDef){
+              hDef.qHyperCubeDef.qDimensions[dimIndex].qDef = {}
+            }
             hDef.qHyperCubeDef.qDimensions[dimIndex].qDef.qSortCriterias = [{
               qSortByNumeric: ambiguousSort || 1
             }];
             // hDef.qHyperCubeDef.qInterColumnSortOrder = [fields.indexOf(time[0])];
-            hDef.qHyperCubeDef.qInterColumnSortOrder = [0]
+            // hDef.qHyperCubeDef.qInterColumnSortOrder = [0]
+            hDef.qHyperCubeDef.qInterColumnSortOrder = (new Array(totalCols).fill())
+            hDef.qHyperCubeDef.qInterColumnSortOrder = hDef.qHyperCubeDef.qInterColumnSortOrder.map(function(item, index){
+              return index
+            })
+            console.log(hDef.qHyperCubeDef.qInterColumnSortOrder);
           }
           else{ //we sort by the first measure desc
-            if(hDef.qHyperCubeDef.qMeasures.length>0){
+            if(hDef.qHyperCubeDef.qMeasures.length>0 && hDef.qHyperCubeDef.qMeasures[0].qSortBy){
               hDef.qHyperCubeDef.qMeasures[0].qSortBy = {
                 qSortByNumeric: ambiguousSort || -1
               }
@@ -2062,14 +2093,42 @@ var SenseSearchInput = (function(){
         else{
 
         }
-        var totalCols = hDef.qHyperCubeDef.qDimensions.length + hDef.qHyperCubeDef.qMeasures.length;
+
         if(!chartType){
           if(totalCols==1){
             chartType = this.nlpModel.vizTypeMap["kpi"];
           }
           else{
+            if(hDef.qHyperCubeDef.qDimensions.length==2){
+              // Set the qGrouping property
+              hDef.barGrouping = { grouping: this.groupingStyle }
+            }
             if(hDef.qHyperCubeDef.qMeasures.length > 0){
-              if(time.length > 0){
+              if(hDef.qHyperCubeDef.qMeasures.length>2){
+                chartType = this.nlpModel.vizTypeMap["table"];
+              }
+              else if(hDef.qHyperCubeDef.qMeasures.length==2){
+                chartType = this.nlpModel.vizTypeMap["combochart"];
+                if(!hDef.qHyperCubeDef.qMeasures[0].qDef){
+                  hDef.qHyperCubeDef.qMeasures[0].qDef = {}
+                }
+                if(!hDef.qHyperCubeDef.qMeasures[1].qDef){
+                  hDef.qHyperCubeDef.qMeasures[1].qDef = {}
+                }
+                hDef.qHyperCubeDef.qMeasures[0].qDef.series = {
+    							type: "bar",
+    							axis: 0,
+    							marker: "circle",
+    							markerFill: true
+    						}
+                hDef.qHyperCubeDef.qMeasures[1].qDef.series = {
+                  type: "line",
+    							axis: 1,
+    							marker: "line",
+    							markerFill: true
+                }
+              }
+              else if(time.length > 0 && this.showTimeSeriesAsLine===true){
                 chartType = this.nlpModel.vizTypeMap["linechart"];
               }
               else{
