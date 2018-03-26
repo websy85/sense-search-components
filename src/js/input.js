@@ -602,7 +602,7 @@ var SenseSearchInput = (function(){
               for (var v = 0; v < associations.qSearchTermsMatched[0][stm].qFieldMatches[fm].qValues.length; v++) {
                 var fieldValueIndex = associations.qSearchTermsMatched[0][stm].qFieldMatches[fm].qValues[v]
                 var valueMatched = associations.qFieldDictionaries[fieldIndex].qResult[fieldValueIndex].qText
-                if (valueMatched.split(" ").length==associations.qSearchTermsMatched[0][stm].qFieldMatches[fm].qTerms.length) {
+                // if (valueMatched.split(" ").length==associations.qSearchTermsMatched[0][stm].qFieldMatches[fm].qTerms.length) {
                   if (!transformation[associations.qSearchTermsMatched[0][stm].qFieldMatches[fm].qTerms.length]) {
                     transformation[associations.qSearchTermsMatched[0][stm].qFieldMatches[fm].qTerms.length] = []
                   }
@@ -614,7 +614,7 @@ var SenseSearchInput = (function(){
                     terms: associations.qSearchTermsMatched[0][stm].qFieldMatches[fm].qTerms,
                     field: associations.qFieldNames[fieldIndex]
                   })
-                }
+                // }
               }
             }
           }
@@ -1604,9 +1604,9 @@ var SenseSearchInput = (function(){
                   this.nlpTerms[t].senseInfo.func = "count";
                 }
               }
-              else if (this.nlpTerms[t].senseInfo.field && this.nlpTerms[t].senseInfo.field.qData) {
-                chartType == "histogram"
-              }
+              // else if (this.nlpTerms[t].senseInfo.field && this.nlpTerms[t].senseInfo.field.qData) {
+              //   chartType == "histogram"
+              // }
             }
           }
         }

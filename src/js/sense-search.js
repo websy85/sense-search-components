@@ -199,11 +199,14 @@ var SenseSearch = (function(){
             that.searchingForVizValues = false
             that.vizAssociationResults.push(response.result.qResults)
             if (that.vizSearchQueue.length > 0) {
+              console.log("adding to queue");
               that.search(that.vizSearchQueue[0][0], that.vizSearchQueue[0][1], that.vizSearchQueue[0][2], that.vizSearchQueue[0][3])
               that.vizSearchQueue.splice(0,1)
             }
             else {
+              console.log("delivering queue");
               that.searchAssociations.deliver(that.vizAssociationResults);
+              that.vizAssociationResults = []
             }
           }
           else{
@@ -605,32 +608,18 @@ var SenseSearch = (function(){
     },
     sortFieldsByTag:{
       value: function(fieldData, cardinalityLimit){
-        //organise the fields
         var tempFields = []
-        for (var i=0;i<fieldData.fields.length;i++){
-          var fieldName = fieldData.fields[i].qName.toLowerCase().replace(/ /gi, "_");
-          // this.appFields[fieldName] = fieldData.fields[i];
-          fieldData.fields[i].fieldName = fieldName
-          tempFields.push(fieldData.fields[i]);
-          for (var t=0;t<fieldData.fields[i].qTags.length;t++){
-            if(!this.appFieldsByTag[fieldData.fields[i].qTags[t]]){
-              this.appFieldsByTag[fieldData.fields[i].qTags[t]] = {};
-            }
-            this.appFieldsByTag[fieldData.fields[i].qTags[t]][fieldName] = {
-              fieldName: fieldData.fields[i].qName
-            };
-          }
-          if(fieldData.fields[i].qCardinal > cardinalityLimit){
-            if(!this.appFieldsByTag.$possibleMeasure){
-              this.appFieldsByTag.$possibleMeasure = {}
-            }
-            this.appFieldsByTag.$possibleMeasure[fieldName] = {fieldName: fieldData.fields[i].qName};
-          }
-        }
+        var tempFieldNames = []
         //organise the dimensions
         for (var i=0;i<fieldData.dimensions.length;i++){
           var fieldName = fieldData.dimensions[i].qData.title.toLowerCase().replace(/ /gi, "_");
           // this.appFields[fieldName] = fieldData.dimensions[i];
+          if(tempFieldNames.indexOf(fieldName)!==-1){
+            continue
+          }
+          else {
+            tempFieldNames.push(fieldName)
+          }
           fieldData.dimensions[i].fieldName = fieldName
           tempFields.push(fieldData.dimensions[i]);
           if(!this.appFieldsByTag.$dimension){
@@ -664,6 +653,12 @@ var SenseSearch = (function(){
             var fieldName = fieldData.measures[i].qData.title.toLowerCase().replace(/ /gi, "_");
             // this.appFields[fieldName] = fieldData.measures[i];
             // this.appFields[fieldName].isMasterItem = true
+            if(tempFieldNames.indexOf(fieldName)!==-1){
+              continue
+            }
+            else {
+              tempFieldNames.push(fieldName)
+            }
             fieldData.measures[i].fieldName = fieldName
             fieldData.measures[i].isMasterItem = true
             tempFields.push(fieldData.measures[i])
@@ -685,6 +680,33 @@ var SenseSearch = (function(){
                 fieldName: fieldData.measures[i].qData.title
               };
             }
+          }
+        }
+        //organise the fields
+        for (var i=0;i<fieldData.fields.length;i++){
+          var fieldName = fieldData.fields[i].qName.toLowerCase().replace(/ /gi, "_");
+          // this.appFields[fieldName] = fieldData.fields[i];
+          if(tempFieldNames.indexOf(fieldName)!==-1){
+            continue
+          }
+          else {
+            tempFieldNames.push(fieldName)
+          }
+          fieldData.fields[i].fieldName = fieldName
+          tempFields.push(fieldData.fields[i]);
+          for (var t=0;t<fieldData.fields[i].qTags.length;t++){
+            if(!this.appFieldsByTag[fieldData.fields[i].qTags[t]]){
+              this.appFieldsByTag[fieldData.fields[i].qTags[t]] = {};
+            }
+            this.appFieldsByTag[fieldData.fields[i].qTags[t]][fieldName] = {
+              fieldName: fieldData.fields[i].qName
+            };
+          }
+          if(fieldData.fields[i].qCardinal > cardinalityLimit){
+            if(!this.appFieldsByTag.$possibleMeasure){
+              this.appFieldsByTag.$possibleMeasure = {}
+            }
+            this.appFieldsByTag.$possibleMeasure[fieldName] = {fieldName: fieldData.fields[i].qName};
           }
         }
         tempFields.sort(function(a,b){
