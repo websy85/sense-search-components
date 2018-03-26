@@ -189,7 +189,8 @@ var SenseSearchResult = (function(){
     onChartResults:{
       value: function(genericObject){
         console.log("Chart created");
-        console.log(genericObject);
+        // console.log(genericObject);
+        senseSearch.vizIdList.push(genericObject.id)
         this.hideLoading();
         var chartElem = document.createElement('div');
         chartElem.classList.add('chart-result');

@@ -104,6 +104,10 @@ var SenseSearch = (function(){
     searchInput: {
       value: SenseSearchInput
     },
+    vizIdList: {
+      writable: true,
+      value: []
+    },
     connect:{
       value: function(config, callbackFn){
         var that = this;
@@ -162,6 +166,18 @@ var SenseSearch = (function(){
       writable: true,
       value: null
     },
+    searchingForVizValues: {
+      writable: true,
+      value: false
+    },
+    vizSearchQueue: {
+      writable: true,
+      value: []
+    },
+    vizAssociationResults: {
+      writable: true,
+      value: []
+    },
     search: {
       value: function(searchText, searchFields, mode, context){
         this.searchStarted.deliver();
@@ -169,10 +185,26 @@ var SenseSearch = (function(){
         mode = mode || "simple";
         context = context || this.context || "LockedFieldsOnly"
         this.pendingSearch = this.exchange.seqId+1;
+        if (mode=="visualizations" && this.searchingForVizValues==false) {
+          this.searchingForVizValues = true
+        }
+        else {
+          this.vizSearchQueue.push([searchText, searchFields, mode, context])
+          console.log("vis search queue length", this.vizSearchQueue.length);
+          return
+        }
         this.terms = searchText.split(" ");
         this.exchange.ask(this.appHandle, "SearchAssociations", [{qContext: context, qSearchFields: searchFields}, this.terms, {qOffset: 0, qCount: 5, qMaxNbrFieldMatches: 5}], function(response){
           if(mode=="visualizations"){
-            that.searchAssociations.deliver(response.result);
+            that.searchingForVizValues = false
+            that.vizAssociationResults.push(response.result.qResults)
+            if (that.vizSearchQueue.length > 0) {
+              that.search(that.vizSearchQueue[0][0], that.vizSearchQueue[0][1], that.vizSearchQueue[0][2], that.vizSearchQueue[0][3])
+              that.vizSearchQueue.splice(0,1)
+            }
+            else {
+              that.searchAssociations.deliver(that.vizAssociationResults);
+            }
           }
           else{
             if(response.id == that.pendingSearch){
@@ -233,8 +265,65 @@ var SenseSearch = (function(){
         });
       }
     },
+    lowLevelSelectTextInField: {
+      value: function(fieldName, values, toggle, callbackFn){
+        var that = this
+        var lDef = {
+          qInfo: {
+            qType: "LB"
+          },
+          qListObjectDef: {
+            qDef: { qFieldDefs: [fieldName] },
+            qInitialDataFetch: [ { qTop: 0, qLeft: 0, qWidth: 1, qHeight: 10000 } ]
+          }
+        }
+        var elemNumbers = []
+        this.exchange.ask(this.appHandle, "CreateSessionObject", [lDef], function(response){
+          if(response.result.qReturn.qHandle==null){
+            that.onSelectionsError.deliver();
+          }
+          else {
+            var fieldHandle = response.result.qReturn.qHandle
+
+            // // This should work but it's not! It would be much quicker!
+            // that.exchange.ask(fieldHandle, "SearchListObjectFor", ["/qListObjectDef", values[0]], function(response){  // should only be a single value here
+            //   console.log(response);
+            //   if (response.result.qSuccess && response.result.qSuccess===true) {
+            //     that.exchange.ask(fieldHandle, "AcceptListObjectSearch", ["/qListObjectDef", true], function(){
+            //       if (callbackFn && typeof callbackFn==="function") {
+            //         callbackFn()
+            //       }
+            //     })
+            //   }
+            //   else {
+            //     that.exchange.ask(fieldHandle, "AbortListObjectSearch", [])
+            //   }
+            // })
+            // // This is slower than searching but searching doesn't appear to work
+            that.exchange.ask(fieldHandle, "GetLayout", [], function(response){
+              var layout = response.result.qLayout
+              if (layout.qListObject.qDataPages[0]) {
+                var matrix = layout.qListObject.qDataPages[0].qMatrix
+                for (var i = 0; i < matrix.length; i++) {
+                  for (var v = 0; v < values.length; v++) {
+                    if (matrix[i][0].qText && matrix[i][0].qText.toLowerCase().indexOf(values[v].toLowerCase())!==-1) {
+                      elemNumbers.push(matrix[i][0].qElemNumber)
+                    }
+                  }
+                }
+                that.exchange.ask(fieldHandle, "SelectListObjectValues", ["/qListObjectDef", elemNumbers, toggle], function(){
+                  if (callbackFn && typeof callbackFn==="function") {
+                    callbackFn()
+                  }
+                })
+              }
+            })
+          }
+        })
+      }
+    },
     selectTextInField: {
-      value: function(fieldName, values, toggle){
+      value: function(fieldName, values, toggle, callbackFn){
         toggle = (toggle==null?true:false);
         var that = this;
         var valueList = [];
@@ -253,7 +342,12 @@ var SenseSearch = (function(){
               that.fieldHandles.push(handle);
               that.fieldsForSelecting.push(fieldName);
               that.exchange.ask(handle, "SelectValues", [valueList, toggle], function(response){
-                that.onSelectionsApplied.deliver();
+                if (callbackFn){
+                  callbackFn()
+                }
+                else {
+                  that.onSelectionsApplied.deliver();
+                }
               });
             }
           });
@@ -261,7 +355,12 @@ var SenseSearch = (function(){
         else {
           var handle = this.fieldHandles[this.fieldsForSelecting.indexOf(fieldName)];
           this.exchange.ask(handle, "SelectValues", [valueList, toggle], function(response){
-            that.onSelectionsApplied.deliver();
+            if (callbackFn){
+              callbackFn()
+            }
+            else {
+              that.onSelectionsApplied.deliver();
+            }
           });
         }
       }
@@ -388,14 +487,14 @@ var SenseSearch = (function(){
             delete defOptions.qHyperCubeDef;
             hCubeDef = defOptions.boxplotDef.qHyperCubeDef;
           }
-          this.exchange.app.visualization.create(def.qInfo.qType, fieldArray, defOptions).then(function(chart){
+          this.exchange.app.visualization.create(def.qInfo.qType, [], defOptions).then(function(chart){
             // console.log(chart);
             // if(chart.model.layout.wsId == that.pendingChart){  //doesn't work in 2.2
-              that.exchange.ask(chart.model.handle, "ApplyPatches", [[{qPath:hCubePath, qOp:"replace", qValue: JSON.stringify(hCubeDef)}], true], function(result){
-                chart.model.getLayout().then(function(){
+              // that.exchange.ask(chart.model.handle, "ApplyPatches", [[{qPath:hCubePath, qOp:"replace", qValue: JSON.stringify(hCubeDef)}], true], function(result){
+                // chart.model.getLayout().then(function(){
                   that.chartResults.deliver(chart);
-                });
-              });
+                // });
+              // });
             // }
           }, logError)
         }
@@ -410,21 +509,46 @@ var SenseSearch = (function(){
         }
       }
     },
+    cleanUpOldVizObjects: {
+      value: function(){
+        for (var i = 0; i < this.vizIdList.length; i++) {
+          this.destroyObject(this.vizIdList[i])
+        }
+        this.vizIdList = []
+      }
+    },
+    destroyObject: {
+      value: function(id){
+        this.exchange.ask(this.appHandle, "DestroySessionObject", [id], function(response){
+        })
+      }
+    },
     clear:{
-      value: function(unlock){
+      value: function(unlock, selectionsOnly, callbackFn){
+        // console.trace()
         var that = this;
         if(unlock===true){
           this.exchange.ask(this.appHandle, "UnlockAll", [], function(response){
             that.exchange.ask(that.appHandle, "ClearAll", [], function(response){
-              that.terms = null;
-              that.cleared.deliver();
+              if (!selectionsOnly) {
+                that.terms = null;
+                that.cleared.deliver();
+              }
+              if (callbackFn && typeof callbackFn=="function") {
+                callbackFn()
+              }
             });
           })
         }
         else{
           this.exchange.ask(this.appHandle, "ClearAll", [], function(response){
-            that.terms = null;
-            that.cleared.deliver();
+            if (!selectionsOnly) {
+              that.terms = null;
+              that.cleared.deliver();
+            }
+            if (callbackFn && typeof callbackFn=="function") {
+              callbackFn()
+            }
           });
         }
       }
@@ -482,9 +606,12 @@ var SenseSearch = (function(){
     sortFieldsByTag:{
       value: function(fieldData, cardinalityLimit){
         //organise the fields
+        var tempFields = []
         for (var i=0;i<fieldData.fields.length;i++){
           var fieldName = fieldData.fields[i].qName.toLowerCase().replace(/ /gi, "_");
-          this.appFields[fieldName] = fieldData.fields[i];
+          // this.appFields[fieldName] = fieldData.fields[i];
+          fieldData.fields[i].fieldName = fieldName
+          tempFields.push(fieldData.fields[i]);
           for (var t=0;t<fieldData.fields[i].qTags.length;t++){
             if(!this.appFieldsByTag[fieldData.fields[i].qTags[t]]){
               this.appFieldsByTag[fieldData.fields[i].qTags[t]] = {};
@@ -492,18 +619,20 @@ var SenseSearch = (function(){
             this.appFieldsByTag[fieldData.fields[i].qTags[t]][fieldName] = {
               fieldName: fieldData.fields[i].qName
             };
-            if(fieldData.fields[i].qCardinal > cardinalityLimit){
-              if(!this.appFieldsByTag.$possibleMeasure){
-                this.appFieldsByTag.$possibleMeasure = {}
-              }
-              this.appFieldsByTag.$possibleMeasure[fieldName] = {fieldName: fieldData.fields[i].qName};
+          }
+          if(fieldData.fields[i].qCardinal > cardinalityLimit){
+            if(!this.appFieldsByTag.$possibleMeasure){
+              this.appFieldsByTag.$possibleMeasure = {}
             }
+            this.appFieldsByTag.$possibleMeasure[fieldName] = {fieldName: fieldData.fields[i].qName};
           }
         }
         //organise the dimensions
         for (var i=0;i<fieldData.dimensions.length;i++){
           var fieldName = fieldData.dimensions[i].qData.title.toLowerCase().replace(/ /gi, "_");
-          this.appFields[fieldName] = fieldData.dimensions[i];
+          // this.appFields[fieldName] = fieldData.dimensions[i];
+          fieldData.dimensions[i].fieldName = fieldName
+          tempFields.push(fieldData.dimensions[i]);
           if(!this.appFieldsByTag.$dimension){
             this.appFieldsByTag.$dimension = {};
           }
@@ -533,8 +662,11 @@ var SenseSearch = (function(){
         if(fieldData.measures && Array.isArray(fieldData.measures)){
           for (var i=0;i<fieldData.measures.length;i++){
             var fieldName = fieldData.measures[i].qData.title.toLowerCase().replace(/ /gi, "_");
-            this.appFields[fieldName] = fieldData.measures[i];
-            this.appFields[fieldName].isMasterItem = true
+            // this.appFields[fieldName] = fieldData.measures[i];
+            // this.appFields[fieldName].isMasterItem = true
+            fieldData.measures[i].fieldName = fieldName
+            fieldData.measures[i].isMasterItem = true
+            tempFields.push(fieldData.measures[i])
             if(!this.appFieldsByTag.$measure){
               this.appFieldsByTag.$measure = {};
             }
@@ -554,6 +686,12 @@ var SenseSearch = (function(){
               };
             }
           }
+        }
+        tempFields.sort(function(a,b){
+          return b.fieldName.split("_").length - a.fieldName.split("_").length
+        })
+        for (var i = 0; i < tempFields.length; i++) {
+          this.appFields[tempFields[i].fieldName] = tempFields[i]
         }
         // console.log(this.appFieldsByTag);
         this.fieldsFetched.deliver();
