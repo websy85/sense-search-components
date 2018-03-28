@@ -131,7 +131,12 @@ var SenseSearchSpeech = (function(){
     onClick: {
       value: function(event){
         if (event.target.classList.contains("sense-search-mic")) {
-          this.recognise()
+          if (this.listening===false) {
+            this.recognise()
+          }
+          else {
+            this.recognition.stop()
+          }
         }
       }
     },
@@ -224,14 +229,15 @@ var SenseSearchSpeech = (function(){
       value: function () {
         console.log('recognition end');
         console.log(this.recognition);
-        try{
-          this.recognition.start();
-        }
-        catch(ex){
-          console.log(ex);
-          this.listening = false
-          this.setClass(false, "sense-search-listening")
-        }
+        this.setClass(false, "sense-search-listening")
+        // try{
+        //   this.recognition.start();
+        // }
+        // catch(ex){
+        //   console.log(ex);
+        //   this.listening = false
+        //   this.setClass(false, "sense-search-listening")
+        // }
       }
     },
     recognitionResult: {

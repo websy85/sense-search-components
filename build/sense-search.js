@@ -131,7 +131,12 @@ var SenseSearchSpeech = (function(){
     onClick: {
       value: function(event){
         if (event.target.classList.contains("sense-search-mic")) {
-          this.recognise()
+          if (this.listening===false) {
+            this.recognise()
+          }
+          else {
+            this.recognition.stop()
+          }
         }
       }
     },
@@ -224,14 +229,15 @@ var SenseSearchSpeech = (function(){
       value: function () {
         console.log('recognition end');
         console.log(this.recognition);
-        try{
-          this.recognition.start();
-        }
-        catch(ex){
-          console.log(ex);
-          this.listening = false
-          this.setClass(false, "sense-search-listening")
-        }
+        this.setClass(false, "sense-search-listening")
+        // try{
+        //   this.recognition.start();
+        // }
+        // catch(ex){
+        //   console.log(ex);
+        //   this.listening = false
+        //   this.setClass(false, "sense-search-listening")
+        // }
       }
     },
     recognitionResult: {
@@ -1066,11 +1072,18 @@ var SenseSearchInput = (function(){
           var fieldName, fieldType;
           if(senseSearch.appFields[f].qInfo){
             fieldName = senseSearch.appFields[f].qData.title;
+            var senseGroup
             if(senseSearch.appFields[f].qInfo.qType==="measure"){
-              fieldType = "exp";
+              senseGroup = "exp"
+              fieldType = "measure";
+            }
+            else if(senseSearch.appFields[f].qInfo.qType==="dimension"){
+              senseGroup = "dim"
+              fieldType = "dimension";
             }
             else{
-              fieldType = "dim";
+              senseGroup = "dim"
+              fieldType = "field";
             }
           }
           else{
@@ -1079,15 +1092,21 @@ var SenseSearchInput = (function(){
               // this.usingMasterMeasures = true
             }
             if(senseSearch.appFieldsByTag.$measure && senseSearch.appFieldsByTag.$measure[f]){
-              fieldType = "exp";
+              // fieldType = "exp";
+              senseGroup = "exp"
+              fieldType = "measure";
             }
             else{
               //check the field tag map
               if(this.nlpModel.fieldTagMap[f] && this.nlpModel.fieldTagMap[f].indexOf("$measure")!==-1){
-                fieldType = "exp";
+                // fieldType = "exp";
+                senseGroup = "exp"
+                fieldType = "field";
               }
               else {
-                fieldType = "dim";
+                // fieldType = "dim";
+                senseGroup = "dim"
+                fieldType = "field";
               }
             }
           }
@@ -1126,6 +1145,7 @@ var SenseSearchInput = (function(){
                 position: pos,
                 length: fieldName.length,
                 senseType: fieldType,
+                senseGroup: senseGroup,
                 queryTag: fieldType,
                 senseInfo: {
                   field: senseSearch.appFields[f]
@@ -1898,35 +1918,35 @@ var SenseSearchInput = (function(){
         }
         //first check to see if any of our dims should be treated as measures based on functions
         for(var t=0;t<this.nlpTerms.length;t++){
-          if(this.nlpTerms[t].senseType == "exp"){
+          if(this.nlpTerms[t].senseType == "measure"){
             measureCount++;
           }
           if(this.nlpTerms[t].senseInfo && this.nlpTerms[t].senseInfo.field && this.nlpTerms[t].senseInfo.field.qInfo && this.nlpTerms[t].senseInfo.field.qInfo.qId){
           }
           else {
-            if(this.nlpTerms[t].senseType == "dim"){
+            if(this.nlpTerms[t].senseType == "field"){
               if(this.nlpTerms[t-1]){
                 if(this.nlpModel.distinctMap[this.nlpTerms[t-1].text]){
-                  this.nlpTerms[t].senseType = "exp";
+                  this.nlpTerms[t].senseGroup = "exp";
                   this.nlpTerms[t].senseInfo.countDistinct = true;
                   this.nlpTerms[t].senseInfo.func = "count";
                   measureCount++;
                 }
                 else if (this.nlpTerms[t-1].senseType=="function") {
-                  this.nlpTerms[t].senseType = "exp";
+                  this.nlpTerms[t].senseGroup = "exp";
                   this.nlpTerms[t].senseInfo.func = this.nlpTerms[t-1].senseInfo.func;
                   measureCount++;
                 }
               }
               else if (this.nlpTerms[t+1]) {
                 if(this.nlpModel.distinctMap[this.nlpTerms[t+1].text]){
-                  this.nlpTerms[t].senseType = "exp";
+                  this.nlpTerms[t].senseGroup = "exp";
                   this.nlpTerms[t].senseInfo.countDistinct = true;
                   this.nlpTerms[t].senseInfo.func = "count";
                   measureCount++;
                 }
                 else if (this.nlpTerms[t+1].senseType=="function") {
-                  this.nlpTerms[t].senseType = "exp";
+                  this.nlpTerms[t].senseGroup = "exp";
                   this.nlpTerms[t].senseInfo.func = this.nlpTerms[t+1].senseInfo.func;
                   measureCount++;
                 }
@@ -1943,9 +1963,9 @@ var SenseSearchInput = (function(){
           //we need a measure for something to render
           for(var t=0;t<this.nlpTerms.length;t++){
             if(measureCount==0){
-              if(this.nlpTerms[t].senseType == "dim" && chartType!="histogram" && (this.nlpTerms[t].senseInfo.field && !this.nlpTerms[t].senseInfo.field.qData)){
+              if(this.nlpTerms[t].senseType == "field" && chartType!="histogram" && (this.nlpTerms[t].senseInfo.field && !this.nlpTerms[t].senseInfo.field.qData)){
                 if(senseSearch.appFieldsByTag.$possibleMeasure && senseSearch.appFieldsByTag.$possibleMeasure[this.nlpTerms[t].name]){
-                  this.nlpTerms[t].senseType = "exp";
+                  this.nlpTerms[t].senseGroup = "exp";
                   measureCount++;
                   if(senseSearch.appFieldsByTag.$numeric && senseSearch.appFieldsByTag.$numeric[this.nlpTerms[t].name]){
                     this.nlpTerms[t].senseInfo.func = this.nlpModel.defaultFunction;
@@ -1955,7 +1975,7 @@ var SenseSearchInput = (function(){
                   }
                 }
                 else{
-                  this.nlpTerms[t].senseType = "exp";
+                  this.nlpTerms[t].senseGroup = "exp";
                   this.nlpTerms[t].senseInfo.countDistinct = true;
                   this.nlpTerms[t].senseInfo.func = "count";
                 }
@@ -1969,7 +1989,7 @@ var SenseSearchInput = (function(){
         dimensionCount=-1,measureCount=-1;
         //then organise the terms into their sense component parts
         for(var t=0;t<this.nlpTerms.length;t++){
-          switch (this.nlpTerms[t].senseType) {
+          switch (this.nlpTerms[t].senseGroup) {
             case "exp":
               var measureInfo = this.nlpTerms[t];
               var measureName = measureInfo.name;
