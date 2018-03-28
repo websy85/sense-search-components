@@ -999,6 +999,7 @@ var SenseSearchInput = (function(){
           }
         }
         // final clean up
+        transformationsToDelete = []
         for (var i=0; i < transformation3.length; i++){
           var canAdd = true
           for (var t = 0; t < transformation3[i].terms.length; t++) {
@@ -1008,11 +1009,16 @@ var SenseSearchInput = (function(){
             }
           }
           if (canAdd===false) {
-            transformation3.splice(i, 1)
+            // transformation3.splice(i, 1)
+            transformationsToDelete.push(i)
           }
           else {
             termsAccountedFor = termsAccountedFor.concat(transformation3[i].terms)
           }
+        }
+        // remove the transformationsToDelete
+        for (var i=transformationsToDelete.length-1; i>-1; i--){
+          transformation3.splice(transformationsToDelete[i], 1)
         }
         console.log(transformation);
         console.log(transformation2);
@@ -1921,7 +1927,9 @@ var SenseSearchInput = (function(){
           if(this.nlpTerms[t].senseType == "measure"){
             measureCount++;
           }
-          if(this.nlpTerms[t].senseInfo && this.nlpTerms[t].senseInfo.field && this.nlpTerms[t].senseInfo.field.qInfo && this.nlpTerms[t].senseInfo.field.qInfo.qId){
+          // if(this.nlpTerms[t].senseInfo && this.nlpTerms[t].senseInfo.field && this.nlpTerms[t].senseInfo.field.qInfo && this.nlpTerms[t].senseInfo.field.qInfo.qId){
+          if (this.nlpTerms[t].senseType == "dimension") {
+            dimensionCount++
           }
           else {
             if(this.nlpTerms[t].senseType == "field"){
@@ -1937,6 +1945,9 @@ var SenseSearchInput = (function(){
                   this.nlpTerms[t].senseInfo.func = this.nlpTerms[t-1].senseInfo.func;
                   measureCount++;
                 }
+                else {
+                  dimensionCount++
+                }
               }
               else if (this.nlpTerms[t+1]) {
                 if(this.nlpModel.distinctMap[this.nlpTerms[t+1].text]){
@@ -1950,6 +1961,12 @@ var SenseSearchInput = (function(){
                   this.nlpTerms[t].senseInfo.func = this.nlpTerms[t+1].senseInfo.func;
                   measureCount++;
                 }
+                else {
+                  dimensionCount++
+                }
+              }
+              else {
+                dimensionCount++
               }
             }
           }
@@ -1962,7 +1979,21 @@ var SenseSearchInput = (function(){
         if(measureCount==0){
           //we need a measure for something to render
           for(var t=0;t<this.nlpTerms.length;t++){
-            if(measureCount==0){
+            if(measureCount==0 && dimensionCount==1){
+              if (this.nlpTerms[t].senseGroup == "dim" && senseSearch.appFieldsByTag.$numeric[this.nlpTerms[t].name]) {
+                chartType = "histogram"
+              }
+              else if (this.nlpTerms[t].senseGroup == "field") {
+                chartType = "kpi"
+              }
+              else {
+                chartType = "table"
+              }
+            }
+            else if (measureCount==0 && dimensionCount > 1) {
+              chartType = "table"
+            }
+            else if (measureCount==0) {
               if(this.nlpTerms[t].senseType == "field" && chartType!="histogram" && (this.nlpTerms[t].senseInfo.field && !this.nlpTerms[t].senseInfo.field.qData)){
                 if(senseSearch.appFieldsByTag.$possibleMeasure && senseSearch.appFieldsByTag.$possibleMeasure[this.nlpTerms[t].name]){
                   this.nlpTerms[t].senseGroup = "exp";
@@ -1980,9 +2011,6 @@ var SenseSearchInput = (function(){
                   this.nlpTerms[t].senseInfo.func = "count";
                 }
               }
-              // else if (this.nlpTerms[t].senseInfo.field && this.nlpTerms[t].senseInfo.field.qData) {
-              //   chartType == "histogram"
-              // }
             }
           }
         }
@@ -2094,7 +2122,8 @@ var SenseSearchInput = (function(){
         }
         //now construct the hypercube
         for(var d in dimensions){
-          var dDef = {};
+          var dDef = {
+          };
           if(dimensions[d].qLibraryId){
             dDef = dimensions[d];
             dDef.qNullSuppression = true
@@ -2107,6 +2136,7 @@ var SenseSearchInput = (function(){
               qNullSuppression: true
             };
           }
+          dDef.name = d
           if(sorting[d]){
             var sortType = "qSortByAscii";
             var sortOrder = sorting[d].order || 1;
@@ -2247,9 +2277,9 @@ var SenseSearchInput = (function(){
           if(totalCols==1 && hDef.qHyperCubeDef.qMeasures.length > 0){
             chartType = this.nlpModel.vizTypeMap["kpi"];
           }
-          // else if(totalCols==1 && hDef.qHyperCubeDef.qDimensions.length > 0){
-          //   chartType = this.nlpModel.vizTypeMap["histogram"];
-          // }
+          else if(totalCols==1 && hDef.qHyperCubeDef.qDimensions.length > 0 && senseSearch.appFieldsByTag.$numeric[hDef.qHyperCubeDef.qDimensions[0].name]){
+            chartType = this.nlpModel.vizTypeMap["histogram"];
+          }
           else{
             if(hDef.qHyperCubeDef.qDimensions.length==2){
               // Set the qGrouping property
@@ -3449,6 +3479,8 @@ var SenseSearch = (function(){
             }
             else {
               console.log("delivering queue");
+              that.vizSearchQueue = []
+              this.searchingForVizValues = false
               that.searchAssociations.deliver(that.vizAssociationResults);
               that.vizAssociationResults = []
             }
@@ -3739,7 +3771,24 @@ var SenseSearch = (function(){
             // if(chart.model.layout.wsId == that.pendingChart){  //doesn't work in 2.2
               // that.exchange.ask(chart.model.handle, "ApplyPatches", [[{qPath:hCubePath, qOp:"replace", qValue: JSON.stringify(hCubeDef)}], true], function(result){
                 // chart.model.getLayout().then(function(){
+            if (def.qInfo.qType == "table") {
+              var colOrder = (new Array(defOptions.qHyperCubeDef.qDimensions.length+defOptions.qHyperCubeDef.qMeasures.length).fill().map(function(item, index){return index}))
+              var patchDefs = [
+                {
+                  qOp: "replace",
+                  qPath: "/qHyperCubeDef/columnOrder",
+                  qValue: JSON.stringify(colOrder)
+                }
+              ]
+              that.exchange.ask(chart.model.handle, "ApplyPatches", [patchDefs, true], function(result){
+                // chart.model.getLayout().then(function(){
                   that.chartResults.deliver(chart);
+                // })
+              })
+            }
+            else {
+              that.chartResults.deliver(chart);
+            }
                 // });
               // });
             // }

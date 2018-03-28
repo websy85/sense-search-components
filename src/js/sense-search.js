@@ -205,6 +205,8 @@ var SenseSearch = (function(){
             }
             else {
               console.log("delivering queue");
+              that.vizSearchQueue = []
+              this.searchingForVizValues = false
               that.searchAssociations.deliver(that.vizAssociationResults);
               that.vizAssociationResults = []
             }
@@ -495,7 +497,24 @@ var SenseSearch = (function(){
             // if(chart.model.layout.wsId == that.pendingChart){  //doesn't work in 2.2
               // that.exchange.ask(chart.model.handle, "ApplyPatches", [[{qPath:hCubePath, qOp:"replace", qValue: JSON.stringify(hCubeDef)}], true], function(result){
                 // chart.model.getLayout().then(function(){
+            if (def.qInfo.qType == "table") {
+              var colOrder = (new Array(defOptions.qHyperCubeDef.qDimensions.length+defOptions.qHyperCubeDef.qMeasures.length).fill().map(function(item, index){return index}))
+              var patchDefs = [
+                {
+                  qOp: "replace",
+                  qPath: "/qHyperCubeDef/columnOrder",
+                  qValue: JSON.stringify(colOrder)
+                }
+              ]
+              that.exchange.ask(chart.model.handle, "ApplyPatches", [patchDefs, true], function(result){
+                // chart.model.getLayout().then(function(){
                   that.chartResults.deliver(chart);
+                // })
+              })
+            }
+            else {
+              that.chartResults.deliver(chart);
+            }
                 // });
               // });
             // }
