@@ -413,6 +413,7 @@ var SenseSearchInput = (function(){
     },
     addFieldNoun:{
       value: function(field, noun){
+        field = parseText(field)
         if(!this.nlpModel.fieldNounMap[field]){
           this.nlpModel.fieldNounMap[field] = [];
         }
@@ -1709,7 +1710,7 @@ var SenseSearchInput = (function(){
               dimensionIndexMap[dimensionName]=dimensionCount;
               break;
           }
-          switch (this.nlpTerms[t].senseType) {          
+          switch (this.nlpTerms[t].senseType) {
             case "function":
               func = this.nlpTerms[t].senseInfo.func;
               break;
