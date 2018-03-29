@@ -1571,32 +1571,27 @@ var SenseSearchInput = (function(){
           }
           else {
             if(this.nlpTerms[t].senseType == "field"){
-              if(this.nlpTerms[t-1]){
-                if(this.nlpModel.distinctMap[this.nlpTerms[t-1].text]){
-                  this.nlpTerms[t].senseGroup = "exp";
-                  this.nlpTerms[t].senseInfo.countDistinct = true;
-                  this.nlpTerms[t].senseInfo.func = "count";
-                  measureCount++;
-                }
-                else if (this.nlpTerms[t-1].senseType=="function") {
-                  this.nlpTerms[t].senseGroup = "exp";
-                  this.nlpTerms[t].senseInfo.func = this.nlpTerms[t-1].senseInfo.func;
-                  measureCount++;
-                }
-                else {
-                  dimensionCount++
-                }
+              var adjacentTermIndex = -1
+              if(this.nlpTerms[t-1] && this.nlpTerms[t-1].queryTag!="!"){
+                adjacentTermIndex = t-1
+              }
+              else if (this.nlpTerms[t-1] && this.nlpTerms[t-1].queryTag=="!" && this.nlpTerms[t-2]) {
+                adjacentTermIndex = t-2
               }
               else if (this.nlpTerms[t+1]) {
-                if(this.nlpModel.distinctMap[this.nlpTerms[t+1].text]){
+                adjacentTermIndex = t+1
+              }
+
+              if(adjacentTermIndex !== -1){
+                if(this.nlpModel.distinctMap[this.nlpTerms[adjacentTermIndex].text]){
                   this.nlpTerms[t].senseGroup = "exp";
                   this.nlpTerms[t].senseInfo.countDistinct = true;
                   this.nlpTerms[t].senseInfo.func = "count";
                   measureCount++;
                 }
-                else if (this.nlpTerms[t+1].senseType=="function") {
+                else if (this.nlpTerms[adjacentTermIndex].senseType=="function") {
                   this.nlpTerms[t].senseGroup = "exp";
-                  this.nlpTerms[t].senseInfo.func = this.nlpTerms[t+1].senseInfo.func;
+                  this.nlpTerms[t].senseInfo.func = this.nlpTerms[adjacentTermIndex].senseInfo.func;
                   measureCount++;
                 }
                 else {
@@ -1618,10 +1613,11 @@ var SenseSearchInput = (function(){
           //we need a measure for something to render
           for(var t=0;t<this.nlpTerms.length;t++){
             if(measureCount==0 && dimensionCount==1){
-              if (this.nlpTerms[t].senseGroup == "dim" && senseSearch.appFieldsByTag.$numeric[this.nlpTerms[t].name]) {
+              if (this.nlpTerms[t].senseGroup == "dim" && senseSearch.appFieldsByTag.$numeric[this.nlpTerms[t].name] && !senseSearch.appFieldsByTag.$measure[this.nlpTerms[t].name] && !senseSearch.appFieldsByTag.$possibleMeasure[this.nlpTerms[t].name]) {
                 chartType = "histogram"
               }
-              else if (this.nlpTerms[t].senseGroup == "field") {
+              else if (this.nlpTerms[t].senseType == "field" && (senseSearch.appFieldsByTag.$measure[this.nlpTerms[t].name] || senseSearch.appFieldsByTag.$possibleMeasure[this.nlpTerms[t].name])) {
+                this.nlpTerms[t].senseGroup = "exp"
                 chartType = "kpi"
               }
               else {
@@ -1712,6 +1708,8 @@ var SenseSearchInput = (function(){
               dimensionCount++;
               dimensionIndexMap[dimensionName]=dimensionCount;
               break;
+          }
+          switch (this.nlpTerms[t].senseType) {          
             case "function":
               func = this.nlpTerms[t].senseInfo.func;
               break;
