@@ -7,10 +7,16 @@
     "example": "examples"
   },
   "dependencies": {
-    "express": "^4.16.2"
+    "enigma.js": "^2.2.0",
+    "express": "^4.16.2",
+    "picasso-plugin-hammer": "^0.5.3",
+    "picasso-plugin-q": "^0.6.0",
+    "picasso.js": "^0.6.0"
   },
   "devDependencies": {
+    "bootstrap": "^4.0.0",
     "grunt": "^0.4.5",
+    "grunt-contrib-copy": "^1.0.0",
     "grunt-contrib-less": "^1.1.0",
     "grunt-contrib-uglify": "^0.11.0",
     "grunt-contrib-watch": "^0.6.1",

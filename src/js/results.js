@@ -28,6 +28,7 @@ var SenseSearchResult = (function(){
         }
         oldElement.parentNode.removeChild(oldElement);
     }
+    this.onUnsupportedVisualization = new Subscription();
     senseSearch.ready.subscribe(this.activate.bind(this));
     return {element: element, object: this};
   }
@@ -199,7 +200,15 @@ var SenseSearchResult = (function(){
         if(parentElem){
           parentElem.appendChild(chartElem);
         }
-        if(senseSearch.exchange.connectionType=="CapabilityAPI"){
+        if (senseSearch.usePicasso===true && typeof senseSearchPicasso!=="undefined") {
+          if (senseSearchPicasso.isSupported(genericObject.model.genericType)) {
+            senseSearchPicasso.render(chartElem, genericObject)
+          }
+          else {
+            this.onUnsupportedVisualization.deliver(genericObject)
+          }
+        }
+        else if(senseSearch.exchange.connectionType=="CapabilityAPI"){
           genericObject.show(chartElem);
         }
       }

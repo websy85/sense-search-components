@@ -363,6 +363,8 @@ var SenseSearchInput = (function(){
           "table": "table",
           "treemap": "treemap",
           "scatter": "scatterplot",
+          "scatterplot": "scatterplot",
+          "scatter chart": "scatterplot",
           "boxplot": "boxplot",
           "distributionplot": "distributionplot",
           "histogram": "histogram"
@@ -1715,10 +1717,11 @@ var SenseSearchInput = (function(){
               func = this.nlpTerms[t].senseInfo.func;
               break;
             case "value":
-              var fieldName, normalizedName;
+              var fieldName, fieldId, normalizedName;
               if(this.nlpTerms[t].senseInfo.field && this.nlpTerms[t].senseInfo.field.qInfo){
                 normalizedName = normalizeText(this.nlpTerms[t].senseInfo.field.qData.title);
                 fieldName = this.nlpTerms[t].senseInfo.field.qData.title;
+                fieldId = this.nlpTerms[t].senseInfo.field.qInfo.qId
               }
               else {
                 normalizedName = normalizeText(this.nlpTerms[t].senseInfo.field.qName);
@@ -1726,7 +1729,10 @@ var SenseSearchInput = (function(){
               }
               if(!sets[normalizedName]){
                 sets[normalizedName] = {
-                  field: fieldName,
+                  field: {
+                    name: fieldName,
+                    id: fieldId
+                  },
                   selector: this.nlpTerms[t].senseInfo.fieldSelection,
                   values: [],
                   selectValues: []
@@ -1751,7 +1757,7 @@ var SenseSearchInput = (function(){
               ambiguousSort = this.nlpTerms[t].senseInfo.order;
               break;
             case "viz":
-              chartType = this.nlpModel.vizTypeMap[this.nlpTerms[t].senseInfo.viz]
+              chartType = this.nlpTerms[t].senseInfo.viz
               break;
             default:
 
@@ -1820,7 +1826,7 @@ var SenseSearchInput = (function(){
                   measures[m].label += " excluding ";
                 }
                 measures[m].label += sets[s].values.join(", ");
-                conditionText += "[" + sets[s].field + "]";
+                conditionText += "[" + sets[s].field.name + "]";
                 conditionText += sets[s].selector;
                 conditionText += "{";
                 conditionText += sets[s].values.join(",");
@@ -1926,7 +1932,7 @@ var SenseSearchInput = (function(){
               if(hDef.qHyperCubeDef.qMeasures.length>2){
                 chartType = this.nlpModel.vizTypeMap["table"];
               }
-              else if(hDef.qHyperCubeDef.qMeasures.length==2){
+              else if(hDef.qHyperCubeDef.qMeasures.length==2 && chartType!="scatterplot"){
                 chartType = this.nlpModel.vizTypeMap["combochart"];
                 if(!hDef.qHyperCubeDef.qMeasures[0].qDef){
                   hDef.qHyperCubeDef.qMeasures[0].qDef = {}
@@ -1964,6 +1970,7 @@ var SenseSearchInput = (function(){
           // hDef.qHyperCubeDef.columnWidths = columnWidths;
         }
         if(hDef.qHyperCubeDef.qDimensions.length > 0 || hDef.qHyperCubeDef.qMeasures.length > 0){
+          setCount = Object.keys(sets).length
           if(setCount > 0 && this.usingMasterMeasures===true){
             var that = this
             senseSearch.clear(false, true, function(){
@@ -1987,20 +1994,27 @@ var SenseSearchInput = (function(){
         console.log(sets);
         var setKeys = Object.keys(sets)
         var key = setKeys[index]
-        senseSearch.lowLevelSelectTextInField(sets[key].field, sets[key].selectValues, false, function(){
-          index++
-          if (index<total) {
-            that.preVizSelect(index, total, sets, callbackFn)
-          }
-          else {
-            callbackFn()
-          }
-        })
+        if (sets[key]) {
+          senseSearch.lowLevelSelectTextInField(sets[key].field, sets[key].selectValues, false, function(){
+            index++
+            if (index<total) {
+              that.preVizSelect(index, total, sets, callbackFn)
+            }
+            else {
+              callbackFn()
+            }
+          })
+        }
+        else {
+          callbackFn()
+        }
       }
     },
     drawGhost:{
       value: function(){
         this.ghostPart = getGhostString(this.searchText, this.suggestions[this.activeSuggestion].qValue);
+        console.log("ghost part");
+        console.log(this.ghostPart);
         this.ghostQuery = this.searchText + this.ghostPart;
         if(typeof document!=="undefined"){
           var ghostDisplay = "<span style='color: transparent;'>"+this.searchText+"</span>"+this.ghostPart;
@@ -2107,20 +2121,35 @@ var SenseSearchInput = (function(){
   };
 
   function getGhostString(query, suggestion){
-    var suggestBase = query;
-    if(suggestion.toLowerCase().indexOf(suggestBase.toLowerCase())!=-1){
-      //the suggestion pertains to the whole query
-
-    }
-    else if(suggestion.length > suggestBase.length){
-      //this must apply to a substring of the query
-      while(suggestion.toLowerCase().indexOf(suggestBase.toLowerCase())==-1){
-        suggestBase = suggestBase.split(" ");
-        suggestBase.splice(0,1);
-        suggestBase = suggestBase.join(" ");
-      }
-    }
-    while(suggestBase.length >= suggestion.length && suggestBase.toLowerCase()!=suggestion.toLowerCase()){
+    var suggestBase = query.toLowerCase();
+    console.log("suggest base 0");
+    console.log(suggestBase);
+    suggestion = suggestion.toLowerCase()
+    console.log("suggestion");
+    console.log(suggestion);
+    // if(suggestion.indexOf(suggestBase)!=-1){
+    //   //the suggestion pertains to the whole query
+    // }
+    // else if(suggestion.length > suggestBase.length){
+    //   //this must apply to a substring of the query
+    //   console.log("suggest base 1 tracking");
+    //   console.log(suggestion.indexOf(suggestBase))
+    //   while(suggestion.indexOf(suggestBase)==-1){
+    //     suggestBase = suggestBase.split(" ");
+    //     suggestBase.splice(0,1);
+    //     suggestBase = suggestBase.join(" ");
+    //   }
+    // }
+    // console.log("suggest base 1");
+    // console.log(suggestBase);
+    // while(suggestBase.length >= suggestion.length && suggestBase!=suggestion){
+    //   suggestBase = suggestBase.split(" ");
+    //   suggestBase.splice(0,1);
+    //   suggestBase = suggestBase.join(" ");
+    // }
+    // console.log("suggest base 2");
+    // console.log(suggestBase);
+    while(suggestion.indexOf(suggestBase)==-1){
       suggestBase = suggestBase.split(" ");
       suggestBase.splice(0,1);
       suggestBase = suggestBase.join(" ");

@@ -19,6 +19,7 @@ var Exchange = (function(){
       //we're connecting with a QSocks connection
       this.connection = options.session;
       this.seqId = this.connection.rpc.requestId;
+      this.app = options;
     }
     else if(connectionType=="CapabilityAPI"){
       this.connection = options.global.session;

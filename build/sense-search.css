@@ -21,7 +21,7 @@
 .sense-search-input-container {
   position: relative;
   z-index: 1000;
-  margin-bottom: 40px;
+  height: 80px;
   width: 100%;
   box-sizing: border-box;
 }

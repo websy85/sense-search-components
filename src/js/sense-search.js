@@ -55,6 +55,10 @@ var SenseSearch = (function(){
         this.results = [];
       }
     },
+    usePicasso: {
+      writable: true,
+      value: false
+    },
     appFields:{
       writable: true,
       value: {}
@@ -271,14 +275,19 @@ var SenseSearch = (function(){
       }
     },
     lowLevelSelectTextInField: {
-      value: function(fieldName, values, toggle, callbackFn){
+      value: function(field, values, toggle, callbackFn){
+        var fDef
+        if (!field.id) {
+          fDef = { qFieldDefs: [field.name] }
+        }
         var that = this
         var lDef = {
           qInfo: {
             qType: "LB"
           },
           qListObjectDef: {
-            qDef: { qFieldDefs: [fieldName] },
+            qDef: fDef,
+            qLibraryId: field.id,
             qInitialDataFetch: [ { qTop: 0, qLeft: 0, qWidth: 1, qHeight: 10000 } ]
           }
         }
@@ -399,6 +408,7 @@ var SenseSearch = (function(){
     },
     createViz: {
       value: function(def){
+        console.log(def);
         this.searchStarted.deliver();
         var that = this;
         that.pendingChart = this.exchange.seqId+1;
@@ -493,6 +503,7 @@ var SenseSearch = (function(){
             hCubeDef = defOptions.boxplotDef.qHyperCubeDef;
           }
           this.exchange.app.visualization.create(def.qInfo.qType, [], defOptions).then(function(chart){
+            that.vizIdList.push(chart.id)
             // console.log(chart);
             // if(chart.model.layout.wsId == that.pendingChart){  //doesn't work in 2.2
               // that.exchange.ask(chart.model.handle, "ApplyPatches", [[{qPath:hCubePath, qOp:"replace", qValue: JSON.stringify(hCubeDef)}], true], function(result){
@@ -520,12 +531,22 @@ var SenseSearch = (function(){
             // }
           }, logError)
         }
-        else{
+        else {
           this.exchange.ask(this.appHandle, "CreateSessionObject", [def], function(response){
-            if(response.id == that.pendingChart){
-              that.exchange.ask(response.result.qReturn.qHandle, "GetLayout", [], function(layout){
-                that.chartResults.deliver({model: response.result.qReturn, layout: layout});
-              })
+            that.vizIdList.push(response.result.qReturn.qGenericId)
+            console.log("Chart response id is", response.id);
+            console.log("pendingChart id is",that.pendingChart);
+            if(response.id >= that.pendingChart){
+              if (that.exchange.connectionType=="Enigma") {
+                that.exchange.app.getObject(response.result.qReturn.qGenericId).then(function(model){
+                  that.chartResults.deliver({model: model, layout: null});
+                })
+              }
+              else {
+                that.exchange.ask(response.result.qReturn.qHandle, "GetLayout", [], function(layoutResponse){
+                  that.chartResults.deliver({model: response.result.qReturn, layout: layoutResponse.result.qLayout});
+                })
+              }
             }
           });
         }
@@ -534,7 +555,9 @@ var SenseSearch = (function(){
     cleanUpOldVizObjects: {
       value: function(){
         for (var i = 0; i < this.vizIdList.length; i++) {
-          this.destroyObject(this.vizIdList[i])
+          if (this.vizIdList[i]) {
+            this.destroyObject(this.vizIdList[i])
+          }
         }
         this.vizIdList = []
       }

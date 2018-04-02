@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Search Example - Associations</title>
+    <link rel="stylesheet" href="./bootstrap.min.css">
+    <link rel="stylesheet" href="./sense-search.min.css"/>
+    <style media="screen">
+      body{
+        font-family: arial !important;
+        width: 80%;
+        margin: 20px auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row" style="text-align:center">
+        <div class="col">
+          <img src="http://websy.io/resources/WebsySignature.png" width="100" alt="">
+          <h1>
+            Sense Search Components
+          </h1>
+          <p>Powered by the Qlik Engine, Enigma.js and Picasso.js</p>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <!-- <sense-search-speech id="mySpeech"></sense-search-speech> -->
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <sense-search-input id="myInput" mode="visualizations"></sense-search-input>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <sense-search-results id="myResults"></sense-search-results>
+        </div>
+      </div>
+    </div>
+    <script type="text/javascript" src="./enigma.min.js"></script>
+    <script type="text/javascript" src="./enigma-schema.min.js"></script>
+    <script type="text/javascript" src="./picasso.min.js"></script>
+    <script type="text/javascript" src="./picasso-q.min.js"></script>
+    <script type="text/javascript" src="./picasso-hammer.min.js"></script>
+    <script type="text/javascript" src="./sense-search.min.js"></script>
+    <script type="text/javascript" src="./sense-search-picasso.min.js"></script>
+    <script type="text/javascript">
+
+      var config = {
+        schema: enigmaSchema,
+        url: "ws://10.211.55.3:8080/demo/app/dc634019-7567-451b-927d-0092c7e8d0fd"
+      };
+
+      var session = enigma.create(config)
+      session.open().then(function(qlik){
+        var app = qlik.openDoc("dc634019-7567-451b-927d-0092c7e8d0fd").then(function(app){
+          senseSearch.usePicasso = true
+          senseSearch.connectWithEnigma(app);
+          var inputOptions = {
+             includeMasterMeasures: true,
+             showTimeSeriesAsLine: false
+            // "searchFields": ["title","username","tags","category","product","short_description"],
+            // "suggestFields": ["title","username","tags","category","product","short_description"]
+          }
+          senseSearch.inputs["myInput"].attach(inputOptions);
+          senseSearch.inputs["myInput"].addFieldTag("month", "$time");
+          senseSearch.results["myResults"].onUnsupportedVisualization.subscribe(function(obj){
+            console.log("Viz type not supported");
+          })
+        })
+      });
+
+    </script>
+  </body>
+</html>

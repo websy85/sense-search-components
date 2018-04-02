@@ -1,10 +1,20 @@
 module.exports = function(grunt) {
   grunt.initConfig({
     includes: {
-      files: {
-          src: ['sense-search.js'],
-          dest: 'build/',
-          cwd: 'src/js'
+      main: {
+        src: ['sense-search.js'],
+        dest: 'build/',
+        cwd: 'src/js'
+      },
+      picasso: {
+        src: ['sense-search-picasso.js'],
+        dest: 'build/',
+        cwd: 'src/picasso'
+      },
+      enigmaSchema: {
+        src: ['enigma-schema.js'],
+        dest: 'examples/',
+        cwd: 'src/enigma'
       }
     },
     watch: {
@@ -59,6 +69,15 @@ module.exports = function(grunt) {
           },
           {
             'examples/sense-search.min.js': ['build/sense-search.js']
+          },
+          {
+            'build/sense-search-picasso.min.js': ['build/sense-search-picasso.js']
+          },
+          {
+            'examples/sense-search-picasso.min.js': ['build/sense-search-picasso.js']
+          },
+          {
+            'examples/enigma-schema.min.js': ['examples/enigma-schema.js']
           }
         ]
       }
@@ -70,12 +89,24 @@ module.exports = function(grunt) {
 					script: "index.js"
 				}
 			}
-		}
+		},
+    copy: {
+      main: {
+        files: [
+          { src: ['node_modules/enigma.js/enigma.min.js'], dest: 'examples/enigma.min.js'},
+          { src: ['node_modules/picasso.js/dist/picasso.min.js'], dest: 'examples/picasso.min.js'},
+          { src: ['node_modules/picasso-plugin-q/dist/picasso-q.min.js'], dest: 'examples/picasso-q.min.js'},
+          { src: ['node_modules/picasso-plugin-hammer/dist/picasso-hammer.min.js'], dest: 'examples/picasso-hammer.min.js'},
+          { src: ['node_modules/bootstrap/dist/css/bootstrap.min.css'], dest: 'examples/bootstrap.min.css'}
+        ],
+      }
+    }
   });
   grunt.loadNpmTasks('grunt-contrib-less');
   grunt.loadNpmTasks('grunt-includes');
   grunt.loadNpmTasks('grunt-contrib-watch');
+  grunt.loadNpmTasks('grunt-contrib-copy');
   grunt.loadNpmTasks('grunt-contrib-uglify');
   grunt.loadNpmTasks('grunt-express-server');
-  grunt.registerTask('default', ['includes','uglify','less','express','watch']);
+  grunt.registerTask('default', ['copy','includes','uglify','less','express','watch']);
 };
