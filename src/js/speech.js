@@ -72,6 +72,7 @@ var SenseSearchSpeech = (function(){
         }
 
         this.ready = new Subscription();
+        this.onSpeechResult = new Subscription();
         senseSearch.ready.subscribe(this.activate.bind(this));
         senseSearch.inputs[this.inputId].onAmbiguity.subscribe(this.onSearchAmbiguity.bind(this))
         senseSearch.cleared.subscribe(this.onClear.bind(this));
@@ -128,6 +129,10 @@ var SenseSearchSpeech = (function(){
       writable: true,
       value: false
     }, // used in conjunction with the safe words to determine if the word should be the first thing said or if it can appear anywhere
+    stopAfterResult: {
+      writable: true,
+      value: false
+    },
     onClick: {
       value: function(event){
         if (event.target.classList.contains("sense-search-mic")) {
@@ -141,6 +146,9 @@ var SenseSearchSpeech = (function(){
       }
     },
     ready: {
+      writable: true
+    },
+    onSpeechResult: {
       writable: true
     },
     activate: {
@@ -227,29 +235,20 @@ var SenseSearchSpeech = (function(){
     },
     recognitionEnd: {
       value: function () {
-        console.log('recognition end');
-        console.log(this.recognition);
         this.setClass(false, "sense-search-listening")
-        // try{
-        //   this.recognition.start();
-        // }
-        // catch(ex){
-        //   console.log(ex);
-        //   this.listening = false
-        //   this.setClass(false, "sense-search-listening")
-        // }
       }
     },
     recognitionResult: {
       value: function (event) {
-        console.log("recognition result");
-        console.log(event);
-        console.log(this.recognition);
         for (var i = event.resultIndex; i < event.results.length; i++) {
           if (event.results[i].isFinal) {
             var searchText = senseSearch.inputs[this.inputId].searchText || "";
             searchText = searchText.trim();
+            if (this.stopAfterResult===true) {
+              this.recognition.stop();
+            }
             var text = event.results[i][0].transcript.trim();
+            this.onSpeechResult.deliver(text)
             if(text===""){
               return
             }

@@ -72,6 +72,7 @@ var SenseSearchSpeech = (function(){
         }
 
         this.ready = new Subscription();
+        this.onSpeechResult = new Subscription();
         senseSearch.ready.subscribe(this.activate.bind(this));
         senseSearch.inputs[this.inputId].onAmbiguity.subscribe(this.onSearchAmbiguity.bind(this))
         senseSearch.cleared.subscribe(this.onClear.bind(this));
@@ -128,6 +129,10 @@ var SenseSearchSpeech = (function(){
       writable: true,
       value: false
     }, // used in conjunction with the safe words to determine if the word should be the first thing said or if it can appear anywhere
+    stopAfterResult: {
+      writable: true,
+      value: false
+    },
     onClick: {
       value: function(event){
         if (event.target.classList.contains("sense-search-mic")) {
@@ -141,6 +146,9 @@ var SenseSearchSpeech = (function(){
       }
     },
     ready: {
+      writable: true
+    },
+    onSpeechResult: {
       writable: true
     },
     activate: {
@@ -227,29 +235,20 @@ var SenseSearchSpeech = (function(){
     },
     recognitionEnd: {
       value: function () {
-        console.log('recognition end');
-        console.log(this.recognition);
         this.setClass(false, "sense-search-listening")
-        // try{
-        //   this.recognition.start();
-        // }
-        // catch(ex){
-        //   console.log(ex);
-        //   this.listening = false
-        //   this.setClass(false, "sense-search-listening")
-        // }
       }
     },
     recognitionResult: {
       value: function (event) {
-        console.log("recognition result");
-        console.log(event);
-        console.log(this.recognition);
         for (var i = event.resultIndex; i < event.results.length; i++) {
           if (event.results[i].isFinal) {
             var searchText = senseSearch.inputs[this.inputId].searchText || "";
             searchText = searchText.trim();
+            if (this.stopAfterResult===true) {
+              this.recognition.stop();
+            }
             var text = event.results[i][0].transcript.trim();
+            this.onSpeechResult.deliver(text)
             if(text===""){
               return
             }
@@ -1977,6 +1976,10 @@ var SenseSearchInput = (function(){
         if(measureCount==0){
           //we need a measure for something to render
           for(var t=0;t<this.nlpTerms.length;t++){
+            if (senseSearch.appFieldsByTag.$measure[this.nlpTerms[t].name] || senseSearch.appFieldsByTag.$possibleMeasure[this.nlpTerms[t].name]) {
+              this.nlpTerms[t].senseGroup = "exp"
+              measureCount++
+            }
             if(measureCount==0 && dimensionCount==1){
               if (this.nlpTerms[t].senseGroup == "dim" && senseSearch.appFieldsByTag.$numeric[this.nlpTerms[t].name] && !senseSearch.appFieldsByTag.$measure[this.nlpTerms[t].name] && !senseSearch.appFieldsByTag.$possibleMeasure[this.nlpTerms[t].name]) {
                 chartType = "histogram"
@@ -1989,9 +1992,9 @@ var SenseSearchInput = (function(){
                 chartType = "table"
               }
             }
-            else if (measureCount==0 && dimensionCount > 1) {
-              chartType = "table"
-            }
+            // else if (measureCount==0 && dimensionCount > 1 && !senseSearch.appFieldsByTag.$possibleMeasure[this.nlpTerms[t].name]) {
+            //   chartType = "table"
+            // }            
             else if (measureCount==0) {
               if(this.nlpTerms[t].senseType == "field" && chartType!="histogram" && (this.nlpTerms[t].senseInfo.field && !this.nlpTerms[t].senseInfo.field.qData)){
                 if(senseSearch.appFieldsByTag.$possibleMeasure && senseSearch.appFieldsByTag.$possibleMeasure[this.nlpTerms[t].name]){
@@ -2267,7 +2270,11 @@ var SenseSearchInput = (function(){
                 qSortByNumeric: ambiguousSort || -1
               }
               // hDef.qHyperCubeDef.qInterColumnSortOrder = [fields.indexOf(hDef.qHyperCubeDef.qMeasures[0].qDef.sortLabel)];
-              hDef.qHyperCubeDef.qInterColumnSortOrder = [hDef.qHyperCubeDef.qDimensions.length]
+              var colOrder = (new Array(hDef.qHyperCubeDef.qDimensions.length+hDef.qHyperCubeDef.qMeasures.length).fill().map(function(item, index){return index}))
+              colOrder.splice(colOrder.indexOf(hDef.qHyperCubeDef.qDimensions.length), 1)
+              colOrder.splice(0,0, hDef.qHyperCubeDef.qDimensions.length)
+              hDef.qHyperCubeDef.qInterColumnSortOrder = colOrder
+              // hDef.qHyperCubeDef.qInterColumnSortOrder = [hDef.qHyperCubeDef.qDimensions.length]
             }
             else if(hDef.qHyperCubeDef.qDimensions.length>0){
 
@@ -3964,6 +3971,12 @@ var SenseSearch = (function(){
       value: function(fieldData, cardinalityLimit){
         var tempFields = []
         var tempFieldNames = []
+        this.appFields = {}
+        this.appFieldsByTag = {
+          $dimension: {},
+          $measure: {},
+          $possibleMeasure: {}
+        }
         //organise the dimensions
         for (var i=0;i<fieldData.dimensions.length;i++){
           var fieldName = fieldData.dimensions[i].qData.title.toLowerCase().replace(/ /gi, "_");
@@ -3976,9 +3989,6 @@ var SenseSearch = (function(){
           }
           fieldData.dimensions[i].fieldName = fieldName
           tempFields.push(fieldData.dimensions[i]);
-          if(!this.appFieldsByTag.$dimension){
-            this.appFieldsByTag.$dimension = {};
-          }
           this.appFieldsByTag.$dimension[fieldName] = {
             fieldName: fieldData.dimensions[i].qData.title
           };
@@ -4016,9 +4026,6 @@ var SenseSearch = (function(){
             fieldData.measures[i].fieldName = fieldName
             fieldData.measures[i].isMasterItem = true
             tempFields.push(fieldData.measures[i])
-            if(!this.appFieldsByTag.$measure){
-              this.appFieldsByTag.$measure = {};
-            }
             this.appFieldsByTag.$measure[fieldName] = {
               fieldName: fieldData.measures[i].qData.title
             };

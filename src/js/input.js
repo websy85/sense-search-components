@@ -1615,6 +1615,10 @@ var SenseSearchInput = (function(){
         if(measureCount==0){
           //we need a measure for something to render
           for(var t=0;t<this.nlpTerms.length;t++){
+            if (senseSearch.appFieldsByTag.$measure[this.nlpTerms[t].name] || senseSearch.appFieldsByTag.$possibleMeasure[this.nlpTerms[t].name]) {
+              this.nlpTerms[t].senseGroup = "exp"
+              measureCount++
+            }
             if(measureCount==0 && dimensionCount==1){
               if (this.nlpTerms[t].senseGroup == "dim" && senseSearch.appFieldsByTag.$numeric[this.nlpTerms[t].name] && !senseSearch.appFieldsByTag.$measure[this.nlpTerms[t].name] && !senseSearch.appFieldsByTag.$possibleMeasure[this.nlpTerms[t].name]) {
                 chartType = "histogram"
@@ -1627,9 +1631,9 @@ var SenseSearchInput = (function(){
                 chartType = "table"
               }
             }
-            else if (measureCount==0 && dimensionCount > 1) {
-              chartType = "table"
-            }
+            // else if (measureCount==0 && dimensionCount > 1 && !senseSearch.appFieldsByTag.$possibleMeasure[this.nlpTerms[t].name]) {
+            //   chartType = "table"
+            // }            
             else if (measureCount==0) {
               if(this.nlpTerms[t].senseType == "field" && chartType!="histogram" && (this.nlpTerms[t].senseInfo.field && !this.nlpTerms[t].senseInfo.field.qData)){
                 if(senseSearch.appFieldsByTag.$possibleMeasure && senseSearch.appFieldsByTag.$possibleMeasure[this.nlpTerms[t].name]){
@@ -1905,7 +1909,11 @@ var SenseSearchInput = (function(){
                 qSortByNumeric: ambiguousSort || -1
               }
               // hDef.qHyperCubeDef.qInterColumnSortOrder = [fields.indexOf(hDef.qHyperCubeDef.qMeasures[0].qDef.sortLabel)];
-              hDef.qHyperCubeDef.qInterColumnSortOrder = [hDef.qHyperCubeDef.qDimensions.length]
+              var colOrder = (new Array(hDef.qHyperCubeDef.qDimensions.length+hDef.qHyperCubeDef.qMeasures.length).fill().map(function(item, index){return index}))
+              colOrder.splice(colOrder.indexOf(hDef.qHyperCubeDef.qDimensions.length), 1)
+              colOrder.splice(0,0, hDef.qHyperCubeDef.qDimensions.length)
+              hDef.qHyperCubeDef.qInterColumnSortOrder = colOrder
+              // hDef.qHyperCubeDef.qInterColumnSortOrder = [hDef.qHyperCubeDef.qDimensions.length]
             }
             else if(hDef.qHyperCubeDef.qDimensions.length>0){
 

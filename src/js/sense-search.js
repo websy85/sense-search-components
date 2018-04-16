@@ -652,6 +652,12 @@ var SenseSearch = (function(){
       value: function(fieldData, cardinalityLimit){
         var tempFields = []
         var tempFieldNames = []
+        this.appFields = {}
+        this.appFieldsByTag = {
+          $dimension: {},
+          $measure: {},
+          $possibleMeasure: {}
+        }
         //organise the dimensions
         for (var i=0;i<fieldData.dimensions.length;i++){
           var fieldName = fieldData.dimensions[i].qData.title.toLowerCase().replace(/ /gi, "_");
@@ -664,9 +670,6 @@ var SenseSearch = (function(){
           }
           fieldData.dimensions[i].fieldName = fieldName
           tempFields.push(fieldData.dimensions[i]);
-          if(!this.appFieldsByTag.$dimension){
-            this.appFieldsByTag.$dimension = {};
-          }
           this.appFieldsByTag.$dimension[fieldName] = {
             fieldName: fieldData.dimensions[i].qData.title
           };
@@ -704,9 +707,6 @@ var SenseSearch = (function(){
             fieldData.measures[i].fieldName = fieldName
             fieldData.measures[i].isMasterItem = true
             tempFields.push(fieldData.measures[i])
-            if(!this.appFieldsByTag.$measure){
-              this.appFieldsByTag.$measure = {};
-            }
             this.appFieldsByTag.$measure[fieldName] = {
               fieldName: fieldData.measures[i].qData.title
             };
