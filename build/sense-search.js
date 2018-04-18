@@ -3851,6 +3851,22 @@ var SenseSearch = (function(){
           }, logError)
         }
         else {
+          // calculate the number of dimensions and measures and get a list of alternative viz types
+          // this is a bit primitive at the moment!!
+          var altVizMap = {
+            "10": ["table"],
+            "01": ["kpi", "table"],
+            "11": ["barchart", "piechart", "linechart"],
+            "12": ["barchart", "linechart", "scatterplot"],
+            "20": ["table"],
+            "02": ["table"],
+            "21": ["barchart", "linchart"],
+            "22": ["scatterplot"],
+            "30": ["table"]
+          }
+          var altVizIndex = def.qHyperCubeDef.qDimensions.length.toString() + def.qHyperCubeDef.qMeasures.length.toString()
+          var altVizList = altVizMap[altVizIndex] || []
+          console.log(altVizList);
           this.exchange.ask(this.appHandle, "CreateSessionObject", [def], function(response){
             that.vizIdList.push(response.result.qReturn.qGenericId)
             console.log("Chart response id is", response.id);
@@ -3858,12 +3874,12 @@ var SenseSearch = (function(){
             if(response.id >= that.pendingChart){
               if (that.exchange.connectionType=="Enigma") {
                 that.exchange.app.getObject(response.result.qReturn.qGenericId).then(function(model){
-                  that.chartResults.deliver({model: model, layout: null});
+                  that.chartResults.deliver({model: model, layout: null, altVizList: altVizList});
                 })
               }
               else {
                 that.exchange.ask(response.result.qReturn.qHandle, "GetLayout", [], function(layoutResponse){
-                  that.chartResults.deliver({model: response.result.qReturn, layout: layoutResponse.result.qLayout});
+                  that.chartResults.deliver({model: response.result.qReturn, layout: layoutResponse.result.qLayout, altVizList: altVizList});
                 })
               }
             }
