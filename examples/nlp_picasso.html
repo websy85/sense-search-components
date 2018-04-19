@@ -39,7 +39,7 @@
           <sense-search-results id="myResults"></sense-search-results>
         </div>
       </div>
-    </div>    
+    </div>
     <script type="text/javascript" src="./enigma.min.js"></script>
     <script type="text/javascript" src="./enigma-schema.min.js"></script>
     <script type="text/javascript" src="./picasso.min.js"></script>
@@ -51,12 +51,12 @@
 
       var config = {
         schema: enigmaSchema,
-        url: "ws://10.211.55.3:8080/demo/app/dc634019-7567-451b-927d-0092c7e8d0fd"
+        url: "ws://ec2-35-171-16-134.compute-1.amazonaws.com/anon/app/7c45fa00-1cc2-40cb-8548-1c3d21606ac7"
       };
 
       var session = enigma.create(config)
       session.open().then(function(qlik){
-        var app = qlik.openDoc("dc634019-7567-451b-927d-0092c7e8d0fd").then(function(app){
+        var app = qlik.openDoc("7c45fa00-1cc2-40cb-8548-1c3d21606ac7").then(function(app){
           senseSearch.usePicasso = true
           senseSearch.connectWithEnigma(app);
           var inputOptions = {

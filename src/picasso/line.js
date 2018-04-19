@@ -59,8 +59,7 @@ else {
       extract: {
         field: "qDimensionInfo/0",
         props: {
-          start: 0,
-          end: { field: "qMeasureInfo/0" }
+          num: { field: "qMeasureInfo/0" }
         }
       }
     }
@@ -86,6 +85,51 @@ else {
       area: {}
     }
   }
+}
+var components = [
+  {
+    type: "axis",
+    dock: "left",
+    scale: "y",
+    settings: {}
+  },
+  {
+    key: "xaxis",
+    type: "axis",
+    dock: "bottom",
+    scale: "x",
+    settings: {}
+  },
+  {
+    key: 'lines',
+    type: 'line',
+    data: {
+      collection: "main"
+    },
+    settings: lineSettings
+  },
+  {
+    key: "rangeX",
+    type: "brush-range",
+    settings: {
+        brush: "range-brush",
+        direction: "horizontal",
+        scale: "x",
+        target: {
+          component: "xaxis"
+        },
+        bubbles: {
+          align: "end"
+        }
+      }
+  }
+]
+if (layout.qHyperCube.qDimensionInfo.length==2) {
+  components.push({
+    type: 'legend-cat',
+    dock: "right",
+    scale: 'color'
+  })
 }
 var pChart = picasso.chart({
   element: element,
@@ -113,49 +157,7 @@ var pChart = picasso.chart({
       }
     }],
     scales: scales,
-    components: [
-      {
-        type: 'legend-cat',
-        dock: "right",
-        scale: 'color'
-      },
-      {
-        type: "axis",
-        dock: "left",
-        scale: "y",
-        settings: {}
-      },
-      {
-        key: "xaxis",
-        type: "axis",
-        dock: "bottom",
-        scale: "x",
-        settings: {}
-      },
-      {
-        key: 'lines',
-        type: 'line',
-        data: {
-          collection: "main"
-        },
-        settings: lineSettings
-      },
-      {
-        key: "rangeX",
-        type: "brush-range",
-        settings: {
-            brush: "range-brush",
-            direction: "horizontal",
-            scale: "x",
-            target: {
-              component: "xaxis"
-            },
-            bubbles: {
-              align: "end"
-            }
-          }
-      }
-    ]
+    components: components
   }
 })
 pChart.brush("range-brush").on("update", function(added){

@@ -68,6 +68,63 @@ else {
     minor: { scale: "y" }
   }
 }
+var components = [
+  {
+    type: "axis",
+    dock: "left",
+    scale: "y",
+    settings: {}
+  },
+  {
+    key: "xaxis",
+    type: "axis",
+    dock: "bottom",
+    scale: "x",
+    settings: {}
+  },
+  {
+    key: "bars",
+    type: "box",
+    data: {
+      collection: "main"
+    },
+    settings: boxSettings,
+    brush: {
+      consume: [
+      {
+        context: "range-brush",
+         style: {
+           inactive: {
+               opacity: 0.3
+             }
+         }
+       }
+     ]
+   }
+  },
+  {
+    key: "rangeX",
+    type: "brush-range",
+    settings: {
+        brush: "range-brush",
+        direction: "horizontal",
+        scale: "x",
+        target: {
+          component: "xaxis"
+        },
+        bubbles: {
+          align: "end"
+        }
+      }
+  }
+]
+if (layout.qHyperCube.qDimensionInfo.length==2) {
+  components.push({
+    type: 'legend-cat',
+    dock: "right",
+    scale: 'color'
+  })
+}
 var pChart = picasso.chart({
   element: element,
   data: {
@@ -94,61 +151,7 @@ var pChart = picasso.chart({
       }
     }],
     scales: scales,
-    components: [
-      {
-        type: 'legend-cat',
-        dock: "right",
-        scale: 'color'
-      },
-      {
-        type: "axis",
-        dock: "left",
-        scale: "y",
-        settings: {}
-      },
-      {
-        key: "xaxis",
-        type: "axis",
-        dock: "bottom",
-        scale: "x",
-        settings: {}
-      },
-      {
-        key: "bars",
-        type: "box",
-        data: {
-          collection: "main"
-        },
-        settings: boxSettings,
-        brush: {
-          consume: [
-          {
-            context: "range-brush",
-             style: {
-               inactive: {
-                   opacity: 0.3
-                 }
-             }
-           }
-         ]
-       }
-      },
-      {
-        key: "rangeX",
-        type: "brush-range",
-        settings: {
-            brush: "range-brush",
-            direction: "horizontal",
-            scale: "x",
-            target: {
-              component: "xaxis"
-            },
-            bubbles: {
-              align: "end"
-            }
-          }
-      }
-    ]
+    components: components
   }
 })
 pChart.brush("range-brush").on("update", function(added){
