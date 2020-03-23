@@ -14,6 +14,12 @@ var SenseSearchResult = (function(){
     for(var o in options){
       this[o] = options[o];
     }
+		if (options && typeof options.searchEntity !== 'undefined') {
+			this.searchEntity = options.searchEntity
+		}
+		else {
+			this.searchEntity = senseSearch
+		}
     this.id = id;
     var oldElement = document.getElementById(id);
     if (oldElement) {
@@ -29,7 +35,7 @@ var SenseSearchResult = (function(){
         oldElement.parentNode.removeChild(oldElement);
     }
     this.onUnsupportedVisualization = new Subscription();
-    senseSearch.ready.subscribe(this.activate.bind(this));
+    this.searchEntity.ready.subscribe(this.activate.bind(this));
     return {element: element, object: this};
   }
 
@@ -51,6 +57,9 @@ var SenseSearchResult = (function(){
       writable:  true,
       value: false
     },
+		searchEntity: {
+			writable:  true      
+		},
     attach:{
       value: function(options, callbackFn){
         var that = this;
@@ -60,11 +69,11 @@ var SenseSearchResult = (function(){
           }
         }
         this.currentSort = this.defaultSort;
-        if(senseSearch && senseSearch.exchange.connection){
+        if(this.searchEntity && this.searchEntity.exchange.connection){
           if(options && options.fields){
             var hDef = this.buildHyperCubeDef();
-            if(senseSearch.exchange.connectionType=="CapabilityAPI"){
-              senseSearch.exchange.app.createCube(hDef.qHyperCubeDef, this.onSearchResults.bind(this)).then(function(response){
+            if(this.searchEntity.exchange.connectionType=="CapabilityAPI"){
+              this.searchEntity.exchange.app.createCube(hDef.qHyperCubeDef, this.onSearchResults.bind(this)).then(function(response){
                 console.log(response);
                 that.handle = response.handle;
                 if(typeof(callbackFn)==="function"){
@@ -73,7 +82,7 @@ var SenseSearchResult = (function(){
               }, logError);
             }
             else {
-              senseSearch.exchange.ask(senseSearch.appHandle, "CreateSessionObject", [hDef], function(response){
+              this.searchEntity.exchange.ask(this.searchEntity.appHandle, "CreateSessionObject", [hDef], function(response){
                 that.handle = response.result.qReturn.qHandle;
                 if(typeof(callbackFn)==="function"){
                   callbackFn.call(null);
@@ -82,14 +91,14 @@ var SenseSearchResult = (function(){
             }
           }
           if(!this.attached){
-            senseSearch.searchStarted.subscribe(this.onSearchStarted.bind(this));
-            senseSearch.searchResults.subscribe(this.onSearchResults.bind(this));
-            senseSearch.noResults.subscribe(this.onNoResults.bind(this));
-            senseSearch.chartResults.subscribe(this.onChartResults.bind(this));
-            senseSearch.cleared.subscribe(this.onClear.bind(this));
+            this.searchEntity.searchStarted.subscribe(this.onSearchStarted.bind(this));
+            this.searchEntity.searchResults.subscribe(this.onSearchResults.bind(this));
+            this.searchEntity.noResults.subscribe(this.onNoResults.bind(this));
+            this.searchEntity.chartResults.subscribe(this.onChartResults.bind(this));
+            this.searchEntity.cleared.subscribe(this.onClear.bind(this));
             this.attached = true;
           }
-          senseSearch.results[this.id] = this;
+          this.searchEntity.results[this.id] = this;
         }
         this.hideLoading();
       }
@@ -191,7 +200,7 @@ var SenseSearchResult = (function(){
       value: function(genericObject){
         console.log("Chart created");
         // console.log(genericObject);
-        senseSearch.vizIdList.push(genericObject.id)
+        this.searchEntity.vizIdList.push(genericObject.id)
         this.hideLoading();
         var chartElem = document.createElement('div');
         chartElem.classList.add('chart-result');
@@ -200,7 +209,7 @@ var SenseSearchResult = (function(){
         if(parentElem){
           parentElem.appendChild(chartElem);
         }
-        if (senseSearch.usePicasso===true && typeof senseSearchPicasso!=="undefined") {
+        if (this.searchEntity.usePicasso===true && typeof senseSearchPicasso!=="undefined") {
           if (senseSearchPicasso.isSupported(genericObject.model.genericType)) {
             senseSearchPicasso.render(chartElem, genericObject)
           }
@@ -208,7 +217,7 @@ var SenseSearchResult = (function(){
             this.onUnsupportedVisualization.deliver(genericObject)
           }
         }
-        else if(senseSearch.exchange.connectionType=="CapabilityAPI"){
+        else if(this.searchEntity.exchange.connectionType=="CapabilityAPI"){
           genericObject.show(chartElem);
         }
       }
@@ -236,13 +245,13 @@ var SenseSearchResult = (function(){
     getHyperCubeData:{
       value: function (callbackFn) {
         var that = this;
-        senseSearch.exchange.getLayout(this.handle, function(response){
+        this.searchEntity.exchange.getLayout(this.handle, function(response){
           var layout = response.result.qLayout;
           that.latestLayout = layout;
           console.trace();
           var qFields = layout.qHyperCube.qDimensionInfo.concat(layout.qHyperCube.qMeasureInfo);
-          senseSearch.exchange.ask(that.handle, "GetHyperCubeData", ["/qHyperCubeDef", [{qTop: that.pageTop, qLeft:0, qHeight: that.pageSize, qWidth: that.fields.length }]], function(response){
-            if(senseSearch.exchange.seqId==response.id){
+          this.searchEntity.exchange.ask(that.handle, "GetHyperCubeData", ["/qHyperCubeDef", [{qTop: that.pageTop, qLeft:0, qHeight: that.pageSize, qWidth: that.fields.length }]], function(response){
+            if(this.searchEntity.exchange.seqId==response.id){
               if(callbackFn && typeof(callbackFn)==="function"){
                 callbackFn.call(this, response);
               }
@@ -301,8 +310,8 @@ var SenseSearchResult = (function(){
     },
     highlightText:{
       value: function(text){
-        if(senseSearch.terms && this.enableHighlighting){
-          var terms = senseSearch.terms;
+        if(this.searchEntity.terms && this.enableHighlighting){
+          var terms = this.searchEntity.terms;
           for (var i=0;i<terms.length;i++){
             text = text.replace(new RegExp(terms[i], "i"), "<span class='highlight"+i+"'>"+terms[i]+"</span>")
           }
@@ -360,7 +369,7 @@ var SenseSearchResult = (function(){
         this.currentSort = sortId;
         startAtZero = startAtZero || false;
         reRender = reRender || false;
-        senseSearch.exchange.ask(this.handle, "ApplyPatches", [[{
+        this.searchEntity.exchange.ask(this.handle, "ApplyPatches", [[{
           qPath: "/qHyperCubeDef/qInterColumnSortOrder",
           qOp: "replace",
           qValue: JSON.stringify(that.getInterColumnSortOrder(that.getFieldIndex(sortId).index))
@@ -389,7 +398,7 @@ var SenseSearchResult = (function(){
         var that = this;
         startAtZero = startAtZero || false;
         reRender = reRender || false;
-        senseSearch.exchange.ask(this.handle, "ApplyPatches", [[
+        this.searchEntity.exchange.ask(this.handle, "ApplyPatches", [[
           {
             qPath: "/qHyperCubeDef/qInterColumnSortOrder",
             qOp: "replace",

@@ -52,14 +52,14 @@
       var config = {
         schema: enigmaSchema,
         // url: "ws://ec2-35-171-16-134.compute-1.amazonaws.com/anon/app/7c45fa00-1cc2-40cb-8548-1c3d21606ac7"
-        url: "wss://10.211.55.3/app/dc634019-7567-451b-927d-0092c7e8d0fd"
+        url: "wss://10.211.55.3/app/9828e6d3-fffb-4312-a18e-60104412eb07"
         // url: "ws://localhost:4848/app/x"
       };
 
       var session = enigma.create(config)
       session.open().then(function(qlik){
         // var app = qlik.openDoc("7c45fa00-1cc2-40cb-8548-1c3d21606ac7").then(function(app){
-        var app = qlik.openDoc("dc634019-7567-451b-927d-0092c7e8d0fd").then(function(app){          
+        var app = qlik.openDoc("9828e6d3-fffb-4312-a18e-60104412eb07").then(function(app){          
         // var app = qlik.openDoc("Sales Discovery.qvf").then(function(app){
           senseSearch.usePicasso = true
           senseSearch.connectWithEnigma(app);

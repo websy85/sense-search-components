@@ -42,6 +42,9 @@ var SenseSearchPicasso = (function(){
     },
     render: {
       value: function(element, qlikObject){
+				if (typeof element === 'string') {
+					element = document.getElementById(element)
+				}
         var that = this
         var functionToCall = "render" + qlikObject.model.genericType
         qlikObject.model.addListener("changed", function(){

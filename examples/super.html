@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Search Example - Associations</title>
+    <link rel="stylesheet" href="./bootstrap.min.css">
+    <link rel="stylesheet" href="./sense-search.min.css"/>
+    <style media="screen">
+			/* .results h1, h2, h3, .lozenge{ */
+			* {
+				text-transform: uppercase;
+				letter-spacing: .1em;
+			}
+      body{
+        font-family: arial !important;
+				font-size: 13px;
+        width: 80%;
+        margin: 20px auto;
+      }
+			input {
+				outline: none;
+			}
+			.hidden {
+				display: none;
+			}
+			.chart-result {
+				height: 300px;
+				position: relative;
+			}
+			.sense-search-input-bg {
+				border: none !important;
+			}
+			.sense-search-input-clear {
+				display: none !important;
+			}
+			.sense-search-lozenge-container {
+				padding-left: 0 !important;
+			}
+			.lozenge {
+				border-bottom: none !important;
+				color: #555555 !important;
+			}
+			.lozenge[data-querytag='!!']{
+				color: #cccccc !important;
+				text-decoration: line-through;			
+			}
+			.super-input {
+				border: none;
+				border-bottom: 1px solid #ccc;
+				font-size: 20px;
+				width: calc(100% - 45px);
+				height: 30px;
+				line-height: 30px;
+			}
+			.search-button {
+			  height: 30px;
+			  width: 30px;
+			  position: absolute;			  
+			  cursor: pointer;
+				background: none;
+				border: none;
+				position: absolute;
+				right: 0;
+			}
+			.search-button:before {
+			  width: 15px;
+			  height: 15px;
+			  border-radius: 50%;
+			  border: 2px solid #cccccc;
+			  position: absolute;
+			  top: 8px;
+			  left: 8px;
+			  content: '';
+			}
+			.search-button:after {
+			  width: 2px;
+			  height: 10px;
+			  background-color: #cccccc;
+			  position: absolute;
+			  top: 19px;
+			  left: 21px;
+			  transform: rotate(-45deg);
+			  content: '';
+			}
+			.spacer {
+				height: 20px;
+			}
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row" style="text-align:center">
+        <div class="col">
+          <img src="https://websy.academy/resources/websy_logo_round.png" width="100" alt="">
+          <h1>
+            Super Sensey McSenseFace
+          </h1>
+          <p>Powered by the Qlik Engine, Enigma.js and Picasso.js</p>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <!-- <sense-search-speech id="mySpeech"></sense-search-speech> -->
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <!-- <sense-search-input id="myInput" mode="visualizations"></sense-search-input> -->
+					<input class="super-input" id="superInput" type="text">
+					<button class="search-button" id="searchButton"></button>
+        </div>
+      </div>
+			<div class="spacer"></div>
+      <div class="row">
+        <div class="col">
+          <div id="results"></div>
+        </div>
+      </div>
+    </div>
+    <script type="text/javascript" src="./enigma.min.js"></script>
+    <script type="text/javascript" src="./enigma-schema.min.js"></script>
+    <script type="text/javascript" src="./picasso.min.js"></script>
+    <script type="text/javascript" src="./picasso-q.min.js"></script>
+    <script type="text/javascript" src="./picasso-hammer.min.js"></script>
+    <script type="text/javascript" src="./sense-search.js"></script>
+    <script type="text/javascript" src="./sense-search-picasso.js"></script>
+		<script src="./super.js" charset="utf-8"></script>    
+  </body>
+</html>

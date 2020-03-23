@@ -97,7 +97,9 @@ module.exports = function(grunt) {
           { src: ['node_modules/picasso.js/dist/picasso.min.js'], dest: 'examples/picasso.min.js'},
           { src: ['node_modules/picasso-plugin-q/dist/picasso-q.min.js'], dest: 'examples/picasso-q.min.js'},
           { src: ['node_modules/picasso-plugin-hammer/dist/picasso-hammer.min.js'], dest: 'examples/picasso-hammer.min.js'},
-          { src: ['node_modules/bootstrap/dist/css/bootstrap.min.css'], dest: 'examples/bootstrap.min.css'}
+          { src: ['node_modules/bootstrap/dist/css/bootstrap.min.css'], dest: 'examples/bootstrap.min.css'},
+					{ src: ['build/sense-search.js'], dest: 'examples/sense-search.js'},
+					{ src: ['build/sense-search-picasso.js'], dest: 'examples/sense-search-picasso.js'}
         ],
       }
     }

@@ -39,6 +39,12 @@ var SenseSearchInput = (function(){
     if(typeof senseSearch==="undefined" && options.senseSearch){
       senseSearch = options.senseSearch;
     }
+		if (options && typeof options.searchEntity !== 'undefined') {
+			this.searchEntity = options.searchEntity
+		}
+		else {
+			this.searchEntity = senseSearch
+		}
     if(typeof document!=="undefined"){
       var element = document.createElement("div");
       element.id = id;
@@ -85,14 +91,14 @@ var SenseSearchInput = (function(){
     this.onAmbiguity = new Subscription();
     this.blockingTerms = {};
     this.blockingTermKeys = [];
-    senseSearch.ready.subscribe(this.activate.bind(this));
-    senseSearch.fieldsFetched.subscribe(this.fieldsFetched.bind(this));
-    senseSearch.onSelectionsApplied.subscribe(this.refresh.bind(this));
-    senseSearch.onLockedUnlocked.subscribe(this.refresh.bind(this));
-    senseSearch.searchAssociations.subscribe(this.onSearchAssociations.bind(this));
-    senseSearch.suggestResults.subscribe(this.onSuggestResults.bind(this));
-    senseSearch.cleared.subscribe(this.onClear.bind(this));
-    senseSearch.searchStarted.subscribe(this.onSearchStarted.bind(this))
+    this.searchEntity.ready.subscribe(this.activate.bind(this));
+    this.searchEntity.fieldsFetched.subscribe(this.fieldsFetched.bind(this));
+    this.searchEntity.onSelectionsApplied.subscribe(this.refresh.bind(this));
+    this.searchEntity.onLockedUnlocked.subscribe(this.refresh.bind(this));
+    this.searchEntity.searchAssociations.subscribe(this.onSearchAssociations.bind(this));
+    this.searchEntity.suggestResults.subscribe(this.onSuggestResults.bind(this));
+    this.searchEntity.cleared.subscribe(this.onClear.bind(this));
+    this.searchEntity.searchStarted.subscribe(this.onSearchStarted.bind(this))
     return {element: element, object: this};
   }
 
@@ -109,6 +115,9 @@ var SenseSearchInput = (function(){
       writable: true,
       value: null
     },
+		searchEntity: {
+			writable:  true      
+		},
     onAmbiguity:{
       writable: true,
       value: null
@@ -144,16 +153,16 @@ var SenseSearchInput = (function(){
         }
         if(this.mode=="visualizations"){
           //get the field list
-          senseSearch.getAppFields(this.nlpModel.cardinalityLimit, this.includeMasterMeasures);
+          this.searchEntity.getAppFields(this.nlpModel.cardinalityLimit, this.includeMasterMeasures);
         }
         else{
           this.activateInput();
         }
-        if(senseSearch && senseSearch.exchange.connection){
-          // senseSearch.searchAssociations.subscribe(this.onSearchAssociations.bind(this));
-          // senseSearch.suggestResults.subscribe(this.onSuggestResults.bind(this));
-          if(!senseSearch.inputs[this.id]){
-            senseSearch.inputs[this.id] = this;
+        if(this.searchEntity && this.searchEntity.exchange.connection){
+          // this.searchEntity.searchAssociations.subscribe(this.onSearchAssociations.bind(this));
+          // this.searchEntity.suggestResults.subscribe(this.onSuggestResults.bind(this));
+          if(!this.searchEntity.inputs[this.id]){
+            this.searchEntity.inputs[this.id] = this;
           }
         }
       }
@@ -540,7 +549,7 @@ var SenseSearchInput = (function(){
                     newTerm.senseTag = "value";
                     newTerm.senseType = "value";
                     newTerm.senseInfo = {
-                      field: senseSearch.appFields[normalizeText(transTerms[i].fields[0])],
+                      field: this.searchEntity.appFields[normalizeText(transTerms[i].fields[0])],
                       fieldSelection: "="
                     };
                   }
@@ -715,16 +724,16 @@ var SenseSearchInput = (function(){
         var matchedFields = []
         //loop through all fields to see if there is a match
         //first we check measures
-        for (var f in senseSearch.appFields){
+        for (var f in this.searchEntity.appFields){
           var fieldName, fieldType;
-          if(senseSearch.appFields[f].qInfo){
-            fieldName = senseSearch.appFields[f].qData.title;
+          if(this.searchEntity.appFields[f].qInfo){
+            fieldName = this.searchEntity.appFields[f].qData.title;
             var senseGroup
-            if(senseSearch.appFields[f].qInfo.qType==="measure"){
+            if(this.searchEntity.appFields[f].qInfo.qType==="measure"){
               senseGroup = "exp"
               fieldType = "measure";
             }
-            else if(senseSearch.appFields[f].qInfo.qType==="dimension"){
+            else if(this.searchEntity.appFields[f].qInfo.qType==="dimension"){
               senseGroup = "dim"
               fieldType = "dimension";
             }
@@ -734,11 +743,11 @@ var SenseSearchInput = (function(){
             }
           }
           else{
-            fieldName = senseSearch.appFields[f].qName;
-            if(senseSearch.appFields[f].isMasterItem){
+            fieldName = this.searchEntity.appFields[f].qName;
+            if(this.searchEntity.appFields[f].isMasterItem){
               // this.usingMasterMeasures = true
             }
-            if(senseSearch.appFieldsByTag.$measure && senseSearch.appFieldsByTag.$measure[f]){
+            if(this.searchEntity.appFieldsByTag.$measure && this.searchEntity.appFieldsByTag.$measure[f]){
               // fieldType = "exp";
               senseGroup = "exp"
               fieldType = "measure";
@@ -795,20 +804,20 @@ var SenseSearchInput = (function(){
                 senseGroup: senseGroup,
                 queryTag: fieldType,
                 senseInfo: {
-                  field: senseSearch.appFields[f]
+                  field: this.searchEntity.appFields[f]
                 }
               };
-              if(senseSearch.appFieldsByTag.$time && senseSearch.appFieldsByTag.$time[f]){
+              if(this.searchEntity.appFieldsByTag.$time && this.searchEntity.appFieldsByTag.$time[f]){
                 newTerm.senseInfo.type = "time";
               }
-              else if(senseSearch.appFieldsByTag.$timestamp && senseSearch.appFieldsByTag.$timestamp[f]){
+              else if(this.searchEntity.appFieldsByTag.$timestamp && this.searchEntity.appFieldsByTag.$timestamp[f]){
                 newTerm.senseInfo.type = "time";
               }
               else if(this.nlpModel.fieldTagMap[normalizeText(fieldName)] && this.nlpModel.fieldTagMap[normalizeText(fieldName)].indexOf("$time")!==-1){
                 newTerm.senseInfo.type = "time";
               }
               matchedFields.push(parsedName)
-              if(senseSearch.appFields[f].isMasterItem){
+              if(this.searchEntity.appFields[f].isMasterItem){
                 this.usingMasterMeasures = true
                 console.log("setting back to true");
               }
@@ -979,7 +988,7 @@ var SenseSearchInput = (function(){
     },
     clear:{
       value: function(){
-        senseSearch.clear();
+        this.searchEntity.clear();
       }
     },
     onClick:{
@@ -1014,7 +1023,7 @@ var SenseSearchInput = (function(){
           if(this.lastAssociationSummary && this.lastAssociationSummary.length > 0){
             this.lastSelectedAssociation = this.lastAssociationSummary[assocationIndex];
           }
-          senseSearch.selectAssociations(this.searchFields || [],  assocationIndex);
+          this.searchEntity.selectAssociations(this.searchFields || [],  assocationIndex);
           this.hideAssociations();
           this.hideSuggestions();
         }
@@ -1072,7 +1081,7 @@ var SenseSearchInput = (function(){
           }
           else if (this.associating && event.keyCode == Key.ENTER) {
             event.preventDefault();
-            senseSearch.selectAssociations(this.searchFields || [],  0);
+            this.searchEntity.selectAssociations(this.searchFields || [],  0);
             this.hideAssociations();
           }
         }
@@ -1161,7 +1170,7 @@ var SenseSearchInput = (function(){
     },
     preVizSearch:{
       value: function(){
-        senseSearch.cleanUpOldVizObjects()
+        this.searchEntity.cleanUpOldVizObjects()
         var searchingForSingle = false;
         if(this.searchText && this.searchText.trim().length>1){
           var that = this;
@@ -1177,15 +1186,15 @@ var SenseSearchInput = (function(){
             }
           }, this.searchTimeout);
 
-            //we're not suggesting for now for UX based reasons
-            if(this.searchText.length > 1 && this.cursorPosition==this.searchText.length){
-              if(this.suggestTimeoutFn){
-                clearTimeout(this.suggestTimeoutFn);
-              }
-              this.suggestTimeoutFn = setTimeout(function(){
-                that.suggest();
-              }, this.suggestTimeout);
+          //we're not suggesting for now for UX based reasons
+          if(this.searchText.length > 1 && this.cursorPosition==this.searchText.length){
+            if(this.suggestTimeoutFn){
+              clearTimeout(this.suggestTimeoutFn);
             }
+            this.suggestTimeoutFn = setTimeout(function(){
+              that.suggest();
+            }, this.suggestTimeout);
+          }
           if(this.chartTimeoutFn){
             clearTimeout(this.chartTimeoutFn);
           }
@@ -1370,11 +1379,12 @@ var SenseSearchInput = (function(){
       value: function(term, field){
         if(typeof senseSearch==="undefined" && this.senseSearch){
           senseSearch = this.senseSearch;
-        }
+					this.searchEntity = this.senseSearch;
+        }				
         this.nlpTerms[term].senseType = "value";
         this.nlpTerms[term].queryTag = field;
         this.nlpTerms[term].senseInfo = {
-          field: senseSearch.appFields[normalizeText(field)],
+          field: this.searchEntity.appFields[normalizeText(field)],
           fieldSelection: "="
         };
         if(this.nlpTerms[term-1] && this.nlpTerms[term-1].text && this.nlpTerms[term-1].text.toLowerCase()==="not"){
@@ -1506,8 +1516,9 @@ var SenseSearchInput = (function(){
       value: function(){
         if(typeof senseSearch==="undefined" && this.senseSearch){
           senseSearch = this.senseSearch;
-        }
-        senseSearch.search(this.searchText, this.searchFields || [], this.mode);
+					this.searchEntity = this.senseSearch;
+        }				
+        this.searchEntity.search(this.searchText, this.searchFields || [], this.mode);
       }
     },
     searchForSingleTerm:{
@@ -1515,26 +1526,29 @@ var SenseSearchInput = (function(){
         this.searching = true
         if(typeof senseSearch==="undefined" && this.senseSearch){
           senseSearch = this.senseSearch;
-        }
+					this.searchEntity = this.senseSearch;
+        }				
         this.blockingTerms[normalizeText(term)] = true;
         this.blockingTermKeys = Object.keys(this.blockingTerms);
         console.log('blocking: '+term);
-        senseSearch.search(term, this.searchFields || [], this.mode);
+        this.searchEntity.search(term, this.searchFields || [], this.mode);
       }
     },
     suggest:{
       value: function(){
         if(typeof senseSearch==="undefined" && this.senseSearch){
           senseSearch = this.senseSearch;
-        }
-        senseSearch.suggest(this.searchText, this.suggestFields || []);
+					this.searchEntity = this.senseSearch;
+        }				
+        this.searchEntity.suggest(this.searchText, this.suggestFields || []);
       }
     },
     nlpViz:{
       value: function(){
         if(typeof senseSearch==="undefined" && this.senseSearch){
           senseSearch = this.senseSearch;
-        }
+					this.searchEntity = this.senseSearch;
+        }				
         console.log('creating viz');
         var hDef = {
           qInfo:{
@@ -1615,15 +1629,15 @@ var SenseSearchInput = (function(){
         if(measureCount==0){
           //we need a measure for something to render
           for(var t=0;t<this.nlpTerms.length;t++){
-            if (senseSearch.appFieldsByTag.$measure[this.nlpTerms[t].name] || senseSearch.appFieldsByTag.$possibleMeasure[this.nlpTerms[t].name]) {
+            if (this.searchEntity.appFieldsByTag.$measure[this.nlpTerms[t].name] || this.searchEntity.appFieldsByTag.$possibleMeasure[this.nlpTerms[t].name]) {
               this.nlpTerms[t].senseGroup = "exp"
               measureCount++
             }
             if(measureCount==0 && dimensionCount==1){
-              if (this.nlpTerms[t].senseGroup == "dim" && senseSearch.appFieldsByTag.$numeric[this.nlpTerms[t].name] && !senseSearch.appFieldsByTag.$measure[this.nlpTerms[t].name] && !senseSearch.appFieldsByTag.$possibleMeasure[this.nlpTerms[t].name]) {
+              if (this.nlpTerms[t].senseGroup == "dim" && this.searchEntity.appFieldsByTag.$numeric[this.nlpTerms[t].name] && !this.searchEntity.appFieldsByTag.$measure[this.nlpTerms[t].name] && !this.searchEntity.appFieldsByTag.$possibleMeasure[this.nlpTerms[t].name]) {
                 chartType = "histogram"
               }
-              else if (this.nlpTerms[t].senseType == "field" && (senseSearch.appFieldsByTag.$measure[this.nlpTerms[t].name] || senseSearch.appFieldsByTag.$possibleMeasure[this.nlpTerms[t].name])) {
+              else if (this.nlpTerms[t].senseType == "field" && (this.searchEntity.appFieldsByTag.$measure[this.nlpTerms[t].name] || this.searchEntity.appFieldsByTag.$possibleMeasure[this.nlpTerms[t].name])) {
                 this.nlpTerms[t].senseGroup = "exp"
                 chartType = "kpi"
               }
@@ -1631,15 +1645,15 @@ var SenseSearchInput = (function(){
                 chartType = "table"
               }
             }
-            // else if (measureCount==0 && dimensionCount > 1 && !senseSearch.appFieldsByTag.$possibleMeasure[this.nlpTerms[t].name]) {
+            // else if (measureCount==0 && dimensionCount > 1 && !this.searchEntity.appFieldsByTag.$possibleMeasure[this.nlpTerms[t].name]) {
             //   chartType = "table"
             // }            
             else if (measureCount==0) {
               if(this.nlpTerms[t].senseType == "field" && chartType!="histogram" && (this.nlpTerms[t].senseInfo.field && !this.nlpTerms[t].senseInfo.field.qData)){
-                if(senseSearch.appFieldsByTag.$possibleMeasure && senseSearch.appFieldsByTag.$possibleMeasure[this.nlpTerms[t].name]){
+                if(this.searchEntity.appFieldsByTag.$possibleMeasure && this.searchEntity.appFieldsByTag.$possibleMeasure[this.nlpTerms[t].name]){
                   this.nlpTerms[t].senseGroup = "exp";
                   measureCount++;
-                  if(senseSearch.appFieldsByTag.$numeric && senseSearch.appFieldsByTag.$numeric[this.nlpTerms[t].name]){
+                  if(this.searchEntity.appFieldsByTag.$numeric && this.searchEntity.appFieldsByTag.$numeric[this.nlpTerms[t].name]){
                     this.nlpTerms[t].senseInfo.func = this.nlpModel.defaultFunction;
                   }
                   else {
@@ -1727,10 +1741,15 @@ var SenseSearchInput = (function(){
                 fieldName = this.nlpTerms[t].senseInfo.field.qData.title;
                 fieldId = this.nlpTerms[t].senseInfo.field.qInfo.qId
               }
-              else {
+              else if (this.nlpTerms[t].senseInfo.field) {
                 normalizedName = normalizeText(this.nlpTerms[t].senseInfo.field.qName);
                 fieldName = this.nlpTerms[t].senseInfo.field.qName;
               }
+							else {
+								console.log('failed term')
+								console.log(this.nlpTerms[t])
+								continue
+							}
               if(!sets[normalizedName]){
                 sets[normalizedName] = {
                   field: {
@@ -1787,7 +1806,7 @@ var SenseSearchInput = (function(){
           if(sorting[d]){
             var sortType = "qSortByAscii";
             var sortOrder = sorting[d].order || 1;
-            if(senseSearch.appFieldsByTag.$numeric && senseSearch.appFieldsByTag.$numeric.indexOf(d)!=-1){
+            if(this.searchEntity.appFieldsByTag.$numeric && this.searchEntity.appFieldsByTag.$numeric.indexOf(d)!=-1){
               sortType = "qSortByNumeric";
             }
             dDef.qDef.qSortCriterias = [{}];
@@ -1855,7 +1874,7 @@ var SenseSearchInput = (function(){
             else if (measures[m].field.qData) {
               fieldKey = normalizeText(measures[m].field.qData.title)
             }
-            if(senseSearch.appFieldsByTag.$currency && senseSearch.appFieldsByTag.$currency[m] && func!=="count"){
+            if(this.searchEntity.appFieldsByTag.$currency && this.searchEntity.appFieldsByTag.$currency[m] && func!=="count"){
               measDef += this.nlpModel.currencySymbol;
             }
             else if(this.nlpModel.fieldTagMap[fieldKey] && this.nlpModel.fieldTagMap[fieldKey].indexOf("$currency")!==-1 && func!=="count"){
@@ -1928,7 +1947,7 @@ var SenseSearchInput = (function(){
           if(totalCols==1 && hDef.qHyperCubeDef.qMeasures.length > 0){
             chartType = this.nlpModel.vizTypeMap["kpi"];
           }
-          else if(totalCols==1 && hDef.qHyperCubeDef.qDimensions.length > 0 && senseSearch.appFieldsByTag.$numeric[hDef.qHyperCubeDef.qDimensions[0].name]){
+          else if(totalCols==1 && hDef.qHyperCubeDef.qDimensions.length > 0 && this.searchEntity.appFieldsByTag.$numeric[hDef.qHyperCubeDef.qDimensions[0].name]){
             chartType = this.nlpModel.vizTypeMap["histogram"];
           }
           else{
@@ -1981,18 +2000,23 @@ var SenseSearchInput = (function(){
           setCount = Object.keys(sets).length
           if(setCount > 0 && this.usingMasterMeasures===true){
             var that = this
-            senseSearch.clear(false, true, function(){
+            that.searchEntity.clear(false, true, function(){
               that.preVizSelect(0, setCount, sets, function(){
-                senseSearch.createViz(hDef);
+                that.searchEntity.createViz(hDef);
               })
             })
           }
           else {
-            senseSearch.clear(false, true, function(){
-              senseSearch.createViz(hDef);
+						var that = this
+            that.searchEntity.clear(false, true, function(){
+              that.searchEntity.createViz(hDef);
             })
           }
         }
+				else {
+					// console.log('delivering no results');
+					// this.searchEntity.noResults.deliver()
+				}
       }
     },
     preVizSelect: {
@@ -2003,7 +2027,7 @@ var SenseSearchInput = (function(){
         var setKeys = Object.keys(sets)
         var key = setKeys[index]
         if (sets[key]) {
-          senseSearch.lowLevelSelectTextInField(sets[key].field, sets[key].selectValues, false, function(){
+          this.searchEntity.lowLevelSelectTextInField(sets[key].field, sets[key].selectValues, false, function(){
             index++
             if (index<total) {
               that.preVizSelect(index, total, sets, callbackFn)

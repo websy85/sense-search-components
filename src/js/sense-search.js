@@ -198,7 +198,8 @@ var SenseSearch = (function(){
           return
         }
         this.terms = searchText.split(" ");
-        this.exchange.ask(this.appHandle, "SearchAssociations", [{qContext: context, qSearchFields: searchFields}, this.terms, {qOffset: 0, qCount: 5, qMaxNbrFieldMatches: 5}], function(response){
+        // this.exchange.ask(this.appHandle, "SearchAssociations", [{qContext: context, qSearchFields: searchFields}, this.terms, {qOffset: 0, qCount: 5, qMaxNbrFieldMatches: 5}], function(response){
+          this.exchange.ask(this.appHandle, "SearchResults", [{qContext: context, qSearchFields: searchFields}, this.terms, {qOffset: 0, qCount: 5, qMaxNbrFieldMatches: 5}], function(response){
           if(mode=="visualizations"){
             that.searchingForVizValues = false
             that.vizAssociationResults.push(response.result.qResults)
@@ -250,7 +251,8 @@ var SenseSearch = (function(){
         context = context || this.context || "LockedFieldsOnly"
         this.pendingSearch = this.exchange.seqId+1;
         this.terms = searchText.split(" ");
-        this.exchange.ask(this.appHandle, "SearchAssociations", [{qContext: context, qSearchFields: searchFields}, this.terms, {qOffset: 0, qCount: 5, qMaxNbrFieldMatches: 5}], function(response){
+        // this.exchange.ask(this.appHandle, "SearchAssociations", [{qContext: context, qSearchFields: searchFields}, this.terms, {qOffset: 0, qCount: 5, qMaxNbrFieldMatches: 5}], function(response){
+        this.exchange.ask(this.appHandle, "SearchResults", [{qContext: context, qSearchFields: searchFields}, this.terms, {qOffset: 0, qCount: 5, qMaxNbrFieldMatches: 5}], function(response){
           if(response.id == that.pendingSearch || response.id == that.exchange.seqId){
             if(searchText== "" || response.result.qResults.qTotalSearchResults>0){
               that.selectAssociations(searchFields, resultGroup, context);
