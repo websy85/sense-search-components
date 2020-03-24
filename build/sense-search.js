@@ -968,7 +968,7 @@ var SenseSearchInput = (function(){
         }
         var termList = term.text.split(" ")
         var termCount = term.text.split(" ").length
-        if (associations.qSearchGroupArray.length > 0 && associations.qSearchGroupArray[0].qSearchTermsMatched[0]){ // should only be a single term matched
+        if (associations.qSearchGroupArray.length > 0 && associations.qSearchGroupArray[0].qSearchTermsMatched.length > 0){ // should only be a single term matched
           for (var stm = 0; stm < associations.qSearchGroupArray[0].qItems.length; stm++) {
             // for (var fm = 0; fm < associations.qSearchTermsMatched[0][stm].qFieldMatches.length; fm++) {
             if (associations.qSearchGroupArray[0].qItems.qItemType === 'Field') {
