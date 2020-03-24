@@ -610,11 +610,11 @@ var SenseSearchInput = (function(){
         if (associations.qSearchGroupArray.length > 0 && associations.qSearchGroupArray[0].qSearchTermsMatched.length > 0){ // should only be a single term matched
           for (var stm = 0; stm < associations.qSearchGroupArray[0].qItems.length; stm++) {
             // for (var fm = 0; fm < associations.qSearchTermsMatched[0][stm].qFieldMatches.length; fm++) {
-            if (associations.qSearchGroupArray[0].qItems.qItemType === 'Field') {
-              var fieldName = associations.qSearchGroupArray[0].qItems[stm].qIdentifier.qField
+            if (associations.qSearchGroupArray[0].qItems[stm].qItemType === 'Field') {
+              var fieldName = associations.qSearchGroupArray[0].qItems[stm].qIdentifier
               for (var v = 0; v < associations.qSearchGroupArray[0].qItems[stm].qItemMatches.length; v++) {
                 // var fieldName = associations.qSearchTermsMatched[0][stm].qFieldMatches[fm].qValues[v]
-                var valueMatched = associations.qSearchGroupArray[0].qItems[stm].qItemMatches[v].qText
+                // var valueMatched = associations.qSearchGroupArray[0].qItems[stm].qItemMatches[v].qText
                 // if (valueMatched.split(" ").length==associations.qSearchTermsMatched[0][stm].qFieldMatches[fm].qTerms.length) {
                   // if (!transformation[associations.qSearchTermsMatched[0][stm].qFieldMatches[fm].qTerms.length]) {
                   //   transformation[associations.qSearchTermsMatched[0][stm].qFieldMatches[fm].qTerms.length] = []
