@@ -3554,7 +3554,7 @@ var SenseSearch = (function(){
           this.exchange.ask(this.appHandle, "SearchResults", [{qContext: context, qSearchFields: searchFields}, this.terms, {qOffset: 0, qCount: 5, qMaxNbrFieldMatches: 5}], function(response){
           if(mode=="visualizations"){
             that.searchingForVizValues = false
-            that.vizAssociationResults.push(response.result.qResults)
+            that.vizAssociationResults.push(response.result.qResult)
             if (that.vizSearchQueue.length > 0) {
               console.log("adding to queue");
               that.search(that.vizSearchQueue[0][0], that.vizSearchQueue[0][1], that.vizSearchQueue[0][2], that.vizSearchQueue[0][3])
@@ -3570,7 +3570,7 @@ var SenseSearch = (function(){
           }
           else{
             if(response.id == that.pendingSearch){
-              if(searchText== "" || response.result.qResults.qTotalSearchResults>0){
+              if(searchText== "" || response.result.qResult.qTotalSearchResults>0){
                 if(mode=="simple"){
                   that.selectAssociations(searchFields, 0, context);
                 }

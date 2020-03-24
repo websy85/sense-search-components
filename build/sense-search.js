@@ -968,30 +968,55 @@ var SenseSearchInput = (function(){
         }
         var termList = term.text.split(" ")
         var termCount = term.text.split(" ").length
-        if (associations.qSearchTermsMatched[0]){ // should only be a single term matched
-          for (var stm = 0; stm < associations.qSearchTermsMatched[0].length; stm++) {
-            for (var fm = 0; fm < associations.qSearchTermsMatched[0][stm].qFieldMatches.length; fm++) {
-              var fieldIndex = associations.qSearchTermsMatched[0][stm].qFieldMatches[fm].qField
-              for (var v = 0; v < associations.qSearchTermsMatched[0][stm].qFieldMatches[fm].qValues.length; v++) {
-                var fieldValueIndex = associations.qSearchTermsMatched[0][stm].qFieldMatches[fm].qValues[v]
-                var valueMatched = associations.qFieldDictionaries[fieldIndex].qResult[fieldValueIndex].qText
+        if (associations.qSearchGroupArray.length > 0 && associations.qSearchGroupArray[0].qSearchTermsMatched[0]){ // should only be a single term matched
+          for (var stm = 0; stm < associations.qSearchGroupArray[0].qItems.length; stm++) {
+            // for (var fm = 0; fm < associations.qSearchTermsMatched[0][stm].qFieldMatches.length; fm++) {
+            if (associations.qSearchGroupArray[0].qItems.qItemType === 'Field') {
+              var fieldName = associations.qSearchGroupArray[0].qItems[stm].qIdentifier.qField
+              for (var v = 0; v < associations.qSearchGroupArray[0].qItems[stm].qItemMatches.length; v++) {
+                // var fieldName = associations.qSearchTermsMatched[0][stm].qFieldMatches[fm].qValues[v]
+                var valueMatched = associations.qSearchGroupArray[0].qItems[stm].qItemMatches[v].qText
                 // if (valueMatched.split(" ").length==associations.qSearchTermsMatched[0][stm].qFieldMatches[fm].qTerms.length) {
-                  if (!transformation[associations.qSearchTermsMatched[0][stm].qFieldMatches[fm].qTerms.length]) {
-                    transformation[associations.qSearchTermsMatched[0][stm].qFieldMatches[fm].qTerms.length] = []
-                  }
-                  transformation[associations.qSearchTermsMatched[0][stm].qFieldMatches[fm].qTerms.length].push({
-                    terms: associations.qSearchTermsMatched[0][stm].qFieldMatches[fm].qTerms,
-                    field: associations.qFieldNames[fieldIndex]
-                  })
+                  // if (!transformation[associations.qSearchTermsMatched[0][stm].qFieldMatches[fm].qTerms.length]) {
+                  //   transformation[associations.qSearchTermsMatched[0][stm].qFieldMatches[fm].qTerms.length] = []
+                  // }
+                  // transformation[associations.qSearchTermsMatched[0][stm].qFieldMatches[fm].qTerms.length].push({
+                  //   terms: associations.qSearchTermsMatched[0][stm].qFieldMatches[fm].qTerms,
+                  //   field: associations.qFieldNames[fieldIndex]
+                  // })
                   transformation2.push({
-                    terms: associations.qSearchTermsMatched[0][stm].qFieldMatches[fm].qTerms,
-                    field: associations.qFieldNames[fieldIndex]
+                    terms: associations.qSearchGroupArray[0].qItems[stm].qSearchTermsMatched,
+                    field: fieldName
                   })
                 // }
               }
             }
           }
         }
+        // if (associations.qSearchTermsMatched[0]){ // should only be a single term matched
+        //   for (var stm = 0; stm < associations.qSearchTermsMatched[0].length; stm++) {
+        //     for (var fm = 0; fm < associations.qSearchTermsMatched[0][stm].qFieldMatches.length; fm++) {
+        //       var fieldIndex = associations.qSearchTermsMatched[0][stm].qFieldMatches[fm].qField
+        //       for (var v = 0; v < associations.qSearchTermsMatched[0][stm].qFieldMatches[fm].qValues.length; v++) {
+        //         var fieldValueIndex = associations.qSearchTermsMatched[0][stm].qFieldMatches[fm].qValues[v]
+        //         var valueMatched = associations.qFieldDictionaries[fieldIndex].qResult[fieldValueIndex].qText
+        //         // if (valueMatched.split(" ").length==associations.qSearchTermsMatched[0][stm].qFieldMatches[fm].qTerms.length) {
+        //           if (!transformation[associations.qSearchTermsMatched[0][stm].qFieldMatches[fm].qTerms.length]) {
+        //             transformation[associations.qSearchTermsMatched[0][stm].qFieldMatches[fm].qTerms.length] = []
+        //           }
+        //           transformation[associations.qSearchTermsMatched[0][stm].qFieldMatches[fm].qTerms.length].push({
+        //             terms: associations.qSearchTermsMatched[0][stm].qFieldMatches[fm].qTerms,
+        //             field: associations.qFieldNames[fieldIndex]
+        //           })
+        //           transformation2.push({
+        //             terms: associations.qSearchTermsMatched[0][stm].qFieldMatches[fm].qTerms,
+        //             field: associations.qFieldNames[fieldIndex]
+        //           })
+        //         // }
+        //       }
+        //     }
+        //   }
+        // }
         var transformation3 = []
         var transformation3Keys = []
         for (var i = 0; i < transformation2.length; i++) {
