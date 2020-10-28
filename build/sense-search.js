@@ -3569,7 +3569,7 @@ var SenseSearch = (function(){
         if (mode=="visualizations" && this.searchingForVizValues==false) {
           this.searchingForVizValues = true
         }
-        else {
+        else if (mode=="visualizations") {
           this.vizSearchQueue.push([searchText, searchFields, mode, context])
           console.log("vis search queue length", this.vizSearchQueue.length);
           return

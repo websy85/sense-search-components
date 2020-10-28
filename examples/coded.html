@@ -14,14 +14,14 @@
       The Search Input and Search results have been added programatically.
     </p>
 
-    <script type="text/javascript" src="sense-search.min.js"></script>
+    <script type="text/javascript" src="sense-search.js"></script>
     <script type="text/javascript">
 
       var config = {
-        host: "branch.qlik.com",
+        host: "ec2-3-92-185-52.compute-1.amazonaws.com",
         prefix: "/anon",
-        isSecure: true,
-        app: "7d4d1ee2-3448-4903-a65a-9911d7eb041e"
+        isSecure: false,
+        app: "af650d53-f31b-476d-b28b-7db3bd2f620f"
       };
 
       var myInput = new SenseSearchInput("myInput");
@@ -65,8 +65,8 @@
             "defaultSort": "title"
          }
          var inputOptions = {
-           "searchFields": ["title","short_description","project_user","category","product","tags"],
-           "suggestFields": ["title","short_description","project_user","category","product","tags"]
+          //  "searchFields": ["title","short_description","project_user","category","product","tags"],
+          //  "suggestFields": ["title","short_description","project_user","category","product","tags"]
          }
          myInput.object.attach(inputOptions);
          myResults.object.attach(resultOptions);
