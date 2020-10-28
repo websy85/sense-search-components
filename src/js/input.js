@@ -493,7 +493,7 @@ var SenseSearchInput = (function(){
         console.log(associations);
         this.searching = false
         if(this.mode=="associations"){
-          this.associations = associations.qResults;
+          this.associations = associations.qResult;
           this.showAssociations();
         }
         else{
@@ -1321,23 +1321,23 @@ var SenseSearchInput = (function(){
         var html = "";
         this.associating = true;
         this.lastAssociationSummary = [];
-        for (var i=0;i<this.associations.qSearchTermsMatched.length;i++){ //loops through each search term match group
-          var termsMatched = this.associations.qSearchTermsMatched[i];
+        // for (var i=0;i<this.associations.qSearchGroupArray.length;i++){ //loops through each search term match group
+          var termsMatched = this.associations.qSearchGroupArray;
           for (var j=0;j<termsMatched.length;j++){  //loops through each valid association
             html += "<li class='sense-search-association-item' data-index='"+j+"'>";
             var associationSummary = [];
-            for(var k=0;k<termsMatched[j].qFieldMatches.length;k++){  //loops through each field in the association
+            for(var k=0;k<termsMatched[j].qItems.length;k++){  //loops through each field in the association
               var extraStyle = "";
-              if (termsMatched[j].qFieldMatches.length > 1) {
-                extraStyle = 'width: '+Math.floor(100/termsMatched[j].qFieldMatches.length)+'%;';
+              if (termsMatched[j].qItems.length > 1) {
+                extraStyle = 'width: '+Math.floor(100/termsMatched[j].qItems.length)+'%;';
               }
-              var fieldMatch = termsMatched[j].qFieldMatches[k];
-              var fieldName = this.associations.qFieldNames[fieldMatch.qField];
+              var fieldMatch = termsMatched[j].qItems[k];
+              var fieldName = termsMatched[j].qItems[k].qIdentifier;
               var fieldValues = [];
               var rawFieldValues = [];
               var elemNumbers = [];
-              for (var v in fieldMatch.qValues){
-                var highlightedValue = highlightAssociationValue(this.associations.qFieldDictionaries[fieldMatch.qField].qResult[v], fieldMatch.qTerms);
+              for (var v in fieldMatch.qItemMatches){
+                var highlightedValue = highlightAssociationValue(fieldMatch.qItemMatches[v], fieldMatch.qSearchTerms);
                 rawFieldValues.push(highlightedValue.matchValue);
                 fieldValues.push(highlightedValue.text);
                 elemNumbers.push(highlightedValue.elem);
@@ -1360,7 +1360,7 @@ var SenseSearchInput = (function(){
             html += "</li>";
             this.lastAssociationSummary.push(associationSummary);
           }
-        }
+        // }
         if(typeof document!=="undefined"){
           var assListEl = document.getElementById(this.id+"_associationsList");
           if(assListEl){

@@ -20,7 +20,7 @@ module.exports = function(grunt) {
     watch: {
       styles: {
         files: ['src/**/*.js','src/less/**/*.less'], // which files to watch
-        tasks: ['includes','uglify','less'],
+        tasks: ['includes','uglify','less', 'copy'],
         options: {
           nospawn: true,
           livereload: true

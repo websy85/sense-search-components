@@ -218,7 +218,7 @@ var SenseSearch = (function(){
           }
           else{
             if(response.id == that.pendingSearch){
-              if(searchText== "" || response.result.qResult.qTotalSearchResults>0){
+              if(searchText== "" || response.result.qResult.qTotalNumberOfGroups>0){
                 if(mode=="simple"){
                   that.selectAssociations(searchFields, 0, context);
                 }
