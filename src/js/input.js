@@ -52,6 +52,7 @@ var SenseSearchInput = (function(){
       var html = templateHtml.replace(/{id}/gim, id);
       element.innerHTML = html;
     }
+    this.clearAllOnClear = true
     options = options || {};
     for(var o in options){
       this[o] = options[o];
@@ -1013,7 +1014,9 @@ var SenseSearchInput = (function(){
     },
     clear:{
       value: function(){
-        this.searchEntity.clear();
+        if (this.clearAllOnClear === true) {
+          this.searchEntity.clear(); 
+        }        
       }
     },
     onClick:{
@@ -1048,7 +1051,7 @@ var SenseSearchInput = (function(){
           if(this.lastAssociationSummary && this.lastAssociationSummary.length > 0){
             this.lastSelectedAssociation = this.lastAssociationSummary[assocationIndex];
           }
-          this.searchEntity.selectAssociations(this.searchFields || [],  assocationIndex);
+          this.searchEntity.selectAssociations(this.searchFields || [],  assocationIndex, this.context || 'LockedFieldsOnly');
           this.hideAssociations();
           this.hideSuggestions();
         }
@@ -1543,7 +1546,7 @@ var SenseSearchInput = (function(){
           senseSearch = this.senseSearch;
 					this.searchEntity = this.senseSearch;
         }				
-        this.searchEntity.search(this.searchText, this.searchFields || [], this.mode);
+        this.searchEntity.search(this.searchText, this.searchFields || [], this.mode, this.context || 'LockedFieldsOnly');
       }
     },
     searchForSingleTerm:{
@@ -1556,7 +1559,7 @@ var SenseSearchInput = (function(){
         this.blockingTerms[normalizeText(term)] = true;
         this.blockingTermKeys = Object.keys(this.blockingTerms);
         console.log('blocking: '+term);
-        this.searchEntity.search(term, this.searchFields || [], this.mode);
+        this.searchEntity.search(term, this.searchFields || [], this.mode, this.context || 'LockedFieldsOnly');
       }
     },
     suggest:{
