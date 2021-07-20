@@ -1016,7 +1016,10 @@ var SenseSearchInput = (function(){
       value: function(){
         if (this.clearAllOnClear === true) {
           this.searchEntity.clear(); 
-        }        
+        } 
+        else {
+          this.onClear()
+        }       
       }
     },
     onClick:{

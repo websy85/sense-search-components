@@ -413,6 +413,7 @@ var SenseSearchInput = (function(){
       var html = templateHtml.replace(/{id}/gim, id);
       element.innerHTML = html;
     }
+    this.clearAllOnClear = true
     options = options || {};
     for(var o in options){
       this[o] = options[o];
@@ -1374,7 +1375,9 @@ var SenseSearchInput = (function(){
     },
     clear:{
       value: function(){
-        this.searchEntity.clear();
+        if (this.clearAllOnClear === true) {
+          this.searchEntity.clear(); 
+        }        
       }
     },
     onClick:{
