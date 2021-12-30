@@ -1160,12 +1160,24 @@ var SenseSearchInput = (function(){
         if(ignoreKeys.indexOf(event.keyCode) != -1){
           return;
         }
-        if(reservedKeys.indexOf(event.keyCode) == -1){
-          if(this.mode==="visualizations"){
-            this.preVizSearch();
+        if (this.disableAutoSearch === true) {
+          if(event.keyCode === 13){
+            if(this.mode==="visualizations"){
+              this.preVizSearch();
+            }
+            else{
+              this.preSearch();
+            }
           }
-          else{
-            this.preSearch();
+        }
+        else {
+          if(reservedKeys.indexOf(event.keyCode) == -1){
+            if(this.mode==="visualizations"){
+              this.preVizSearch();
+            }
+            else{
+              this.preSearch();
+            }
           }
         }
       }
