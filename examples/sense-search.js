@@ -3585,7 +3585,7 @@ var SenseSearch = (function(){
         mode = mode || "simple";
         context = context || this.context || "LockedFieldsOnly"
         if (this.exchange.connection && this.exchange.connection.rpc && this.exchange.connection.rpc.requestId) {
-          this.pendingSearch = this.exchange.connection.rpc.requestId;
+          this.pendingSearch = this.exchange.connection.rpc.requestId+1;
         }
         else {
           this.pendingSearch = this.exchange.seqId+1;
