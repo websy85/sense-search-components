@@ -459,8 +459,9 @@ var SenseSearchInput = (function(){
         if(typeof document!=="undefined"){
           var inputEl = document.getElementById(this.id+'_input');
           if(inputEl){
+            this.previousSearchText = inputEl.value
             inputEl.value = "";
-          }
+          }          
         }
         this.searchText = "";
         this.nlpTerms = [];

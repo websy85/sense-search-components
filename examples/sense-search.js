@@ -820,8 +820,9 @@ var SenseSearchInput = (function(){
         if(typeof document!=="undefined"){
           var inputEl = document.getElementById(this.id+'_input');
           if(inputEl){
+            this.previousSearchText = inputEl.value
             inputEl.value = "";
-          }
+          }          
         }
         this.searchText = "";
         this.nlpTerms = [];
@@ -1521,12 +1522,24 @@ var SenseSearchInput = (function(){
         if(ignoreKeys.indexOf(event.keyCode) != -1){
           return;
         }
-        if(reservedKeys.indexOf(event.keyCode) == -1){
-          if(this.mode==="visualizations"){
-            this.preVizSearch();
+        if (this.disableAutoSearch === true) {
+          if(event.keyCode === 13){
+            if(this.mode==="visualizations"){
+              this.preVizSearch();
+            }
+            else{
+              this.preSearch();
+            }
           }
-          else{
-            this.preSearch();
+        }
+        else {
+          if(reservedKeys.indexOf(event.keyCode) == -1){
+            if(this.mode==="visualizations"){
+              this.preVizSearch();
+            }
+            else{
+              this.preSearch();
+            }
           }
         }
       }
@@ -3571,7 +3584,12 @@ var SenseSearch = (function(){
         var that = this;
         mode = mode || "simple";
         context = context || this.context || "LockedFieldsOnly"
-        this.pendingSearch = this.exchange.seqId+1;
+        if (this.exchange.connection && this.exchange.connection.rpc && this.exchange.connection.rpc.requestId) {
+          this.pendingSearch = this.exchange.connection.rpc.requestId;
+        }
+        else {
+          this.pendingSearch = this.exchange.seqId+1;
+        }        
         if (mode=="visualizations" && this.searchingForVizValues==false) {
           this.searchingForVizValues = true
         }
